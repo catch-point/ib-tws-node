@@ -1,0 +1,41 @@
+{
+  "name": "ib-tws-node",
+  "version": "0.0.1",
+  "description": "Node client library for for Interactive Broker's Trading Workstation and Gateway",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "postinstall": "./postinstall.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jamesrdf/ib-tws-node.git"
+  },
+  "keywords": [
+    "ib",
+    "tws",
+    "twsapi",
+    "interactive",
+    "brokers",
+    "gateway",
+    "trading",
+    "finance",
+    "automated",
+    "library"
+  ],
+  "author": "James Leigh",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/jamesrdf/ib-tws-node/issues"
+  },
+  "homepage": "https://github.com/jamesrdf/ib-tws-node#readme",
+  "bin": {
+    "ib-tws-shell": "./index.js"
+  },
+  "binary-dependencies": {
+    "lib/ib-tws-shell.jar": "https://github.com/jamesrdf/ib-tws-shell/releases/download/0.0.1/ib-tws-shell-0.0.1.jar"
+  },
+  "devDependencies": {
+    "jest": "^26.6.3"
+  }
+}
