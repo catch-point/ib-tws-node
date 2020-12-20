@@ -127,11 +127,9 @@ function registerListeners(self, shell) {
                     complete: false
                 };
             }
-        } else if (method_or_type) {
-            schema[method_or_type].values.push(name);
-        } else if (!schema[name]) {
+        } else if (method_or_type == "Shell" || method_or_type == "EClient") {
             const method_name = name;
-            const item = schema[method_name] = {
+            const item = schema[method_name] = schema[method_name] || {
                 method_name,
                 param_names: [],
                 param_types: [],
@@ -153,10 +151,12 @@ function registerListeners(self, shell) {
                     return self;
                 }
             });
+        } else if (method_or_type) {
+            schema[method_or_type].values.push(name);
         }
     }).on('helpEnd', method_or_type => {
-        if (method_or_type) {
-            const item = schema[method_or_type];
+        const item = schema[method_or_type];
+        if (item) {
             item.complete = true;
             while (item.listeners.length) {
                 item.listeners.shift()();
@@ -164,8 +164,9 @@ function registerListeners(self, shell) {
         }
     });
     return new Promise(cb => {
-        self.once('helpEnd', cb);
-        send(shell, 'help', []);
+        self.once('helpEnd', () => self.once('helpEnd', cb));
+        send(shell, 'help', ["Shell"]);
+        send(shell, 'help', ["EClient"]);
     }).then(() => shell);
 }
 
@@ -173,6 +174,8 @@ function registerListeners(self, shell) {
  * Locates the java executable
  */
 async function getJavaExe(args) {
+    const java = findArg('java', args);
+    if (java) return java;
     const jre = await findJavaRuntimeEnvironment(args);
     if (await access(jre).then(() => jre, err => {})) return `${jre}/bin/java`;
     else return 'java';
@@ -256,6 +259,19 @@ async function assertType(shell, schema, param_type, param_value) {
 }
 
 /**
+ * Checks if the arguments is in the process arguments and returns the value if found
+ */
+function findArg(long_name, args) {
+    return args.reduce((value, arg, a) => {
+        if (a > 0 && args[a-1] == `--${long_name}`)
+            return arg;
+        else if (typeof arg == 'string' && arg.substring(0, long_name.length + 3) == `--${long_name}=`)
+            return arg.substring(long_name.length + 3);
+        else return value;
+    }, null)
+}
+
+/**
  * Locals the JRE on the system by looking in the usual TWS locations.
  */
 async function findJavaRuntimeEnvironment(args) {
@@ -292,19 +308,6 @@ function isIncorrectPrimitive(type, value) {
         default:
             return false;
     }
-}
-
-/**
- * Checks if the arguments is in the process arguments and returns the value if found
- */
-function findArg(long_name, args) {
-    return args.reduce((value, arg, a) => {
-        if (a > 0 && args[a-1] == `--${long_name}`)
-            return arg;
-        else if (typeof arg == 'string' && arg.substring(0, long_name.length + 3) == `--${long_name}=`)
-            return arg.substring(long_name.length + 3);
-        else return value;
-    }, null)
 }
 
 /**
