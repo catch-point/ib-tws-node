@@ -127,10 +127,10 @@ function registerListeners(self, shell) {
                     complete: false
                 };
             }
-        } else if (method_or_type == "Shell" || method_or_type == "EClient") {
-            const method_name = name;
-            const item = schema[method_name] = schema[method_name] || {
-                method_name,
+        } else if (schema[method_or_type] && schema[method_or_type].action_type) {
+            const action_name = name;
+            const item = schema[action_name] = schema[action_name] || {
+                action_name,
                 param_names: [],
                 param_types: [],
                 listeners: [],
@@ -138,20 +138,36 @@ function registerListeners(self, shell) {
                 complete: false
             };
             Object.assign(self, {
-                async [item.method_name]() {
-                    await completeItem(shell, schema, item.method_name);
+                async [item.action_name]() {
+                    await completeItem(shell, schema, item.action_name);
                     const param_values = Array.prototype.slice.call(arguments);
                     if (param_values.length != item.param_types.length) {
-                        assert.fail(`Incorrect parameters for ${item.method_name}(${item.param_types.join(',')})`)
+                        assert.fail(`Incorrect parameters for ${item.action_name}(${item.param_types.join(',')})`)
                     }
                     await Promise.all(item.param_types.map(async(param_type, i) => {
                         await assertType(shell, schema, param_type, param_values[i]);
                     }));
-                    await send(shell, item.method_name, param_values);
+                    await send(shell, item.action_name, param_values);
                     return self;
                 }
             });
-        } else if (method_or_type) {
+        } else if (method_or_type == "actions") {
+            schema[name] = schema[name] || {
+                action_type: name,
+                values: [],
+                listeners: [],
+                requested: false,
+                complete: false
+            };
+        } else if (method_or_type == "events") {
+            schema[name] = schema[name] || {
+                event_type: name,
+                values: [],
+                listeners: [],
+                requested: false,
+                complete: false
+            };
+        } else if (schema[method_or_type]) {
             schema[method_or_type].values.push(name);
         }
     }).on('helpEnd', method_or_type => {
@@ -164,9 +180,8 @@ function registerListeners(self, shell) {
         }
     });
     return new Promise(cb => {
-        self.once('helpEnd', () => self.once('helpEnd', cb));
-        send(shell, 'help', ["Shell"]);
-        send(shell, 'help', ["EClient"]);
+        self.once('helpEnd', cb);
+        send(shell, 'help', []);
     }).then(() => shell);
 }
 
@@ -203,7 +218,7 @@ async function completeItem(shell, schema, name) {
             item.listeners.push(cb);
             if (!item.requested) {
                 item.requested = true;
-                send(shell, 'help', [item.method_name || item.type_name]);
+                send(shell, 'help', [item.action_name || item.type_name]);
             }
         });
     }
