@@ -267,7 +267,7 @@ async function assertType(shell, schema, param_type, param_value) {
         }));
     } else if (param_value != null && Object.keys(type.object_properties).length) {
         assert.fail(`Expected ${param_value} to be an object`);
-    } else if (isIncorrectPrimitive(type, param_value)) {
+    } else if (param_value != null && isIncorrectPrimitive(type, param_value)) {
         assert.fail(`Expected ${param_value} to be a(n) ${param_type}`);
     }
 }
