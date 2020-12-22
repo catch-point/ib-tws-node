@@ -70,15 +70,16 @@ async function createInstanceAsync(settings) {
  */
 async function spawn_shell(settings) {
     const args = ['--no-prompt'];
-    for (var key in settings) {
-        if (settings[key]) {
+    ['java-home', 'tws-api-jar', 'tws-api-path', 'tws-path', 'tws-settings-path', 'tws-version', 'silence']
+      .forEach(key => {
+        if (settings && settings[key]) {
             args.push(`--${key}`);
             if (key != 'silence' && key != 'no-prompt') {
                 args.push(settings[key]);
             }
         }
-    }
-    const java_exe = await getJavaExe(args);
+    });
+    const java_exe = settings && settings['java'] ? settingns['java'] : await getJavaExe(args);
     const jar = path.resolve(module.filename, '..', 'lib/ib-tws-shell.jar');
     const java = spawn(java_exe, ['-jar', jar].concat(args));
     java.stderr.pipe(process.stderr);
@@ -189,8 +190,6 @@ function registerListeners(self, shell) {
  * Locates the java executable
  */
 async function getJavaExe(args) {
-    const java = findArg('java', args);
-    if (java) return java;
     const jre = await findJavaRuntimeEnvironment(args);
     if (await access(jre).then(() => jre, err => {})) return `${jre}/bin/java`;
     else return 'java';

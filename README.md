@@ -178,7 +178,7 @@ The ib-tws-node module exports a factory function to create a new client. It tak
 |tws-api-jar|Points to the TwsApi.jar file that should be used when connecting to TWS. If none is provide it is searched for using tws-api-path.|
 |tws-api-path|Where to look for the TwsApi.jar file (if tws-api-jar is not provided). If not provided, it will look in C:\\TWS API, ~/IBJts, and a few other places.|
 |tws-path|The install location of TWS Desktop or Gateway. If using an offline version (or Gateway) this can point to the folder with the version number. When not provided, the system will look in the default location for Gateway and (if not found) TWS Desktop.|
-|tws-settings-path||Every running instance must have a unique tws-settings-path, which defaults to `~/Jts`.|
+|tws-settings-path|Every running instance must have a unique tws-settings-path, which defaults to `~/Jts`.|
 |tws-version|If the tws-path is not provided this can help choose which TWS instance to launch. It is recommended to use an offline TWS install to give project contributors time to test new TWS releases.|
 |silence|Don't log anything, just report API responses.|
 
@@ -312,6 +312,57 @@ Issue a "faMsgTypeName" response converting 1, 2, or 3 into "GROUPS", "PROFILES"
 #### getTwsConnectionTime
 
 Issue a "getTwsConnectionTime" response with the time the connection was established.
+
+Alternatives
+------------
+
+This project is not the only TWS API client for node and below are some differences.
+
+### TWS GUI
+
+This project has an expanded scope that include managing areas of the TWS software that are not included in the TWS API. This make this client particularly useful for deployments to a headless server or an automated trading system. Included in this project is the ability to (among other things):
+
+* It can be initiate TWS or Gateway to startup or shutdown;
+* Automatically fill in your username and password and click the Login button in the Login dialogue;
+* Ensure attempts to logon from another computer or device do not succeed;
+* Participate in Two Factor Authentication using IBKR Mobile in such a way that users who miss the 2FA alert on their device will automatically have another opportunity without needing be at the computer;
+* Handle various dialogue boxes, to keep things running smoothly with no user involvement;
+
+### Promises
+
+This project uses promises to reject parameter input errors and some i/o errors, while server errors use the `error` event. This helps to distinguish between client and server errors and make it easier to associate parameter errors with calling function.
+
+### ContractDetails.contract
+
+This project follows the Java Client naming of a `contract` property on `ContractDetails`, while other projects may call this project 'summary'.
+
+### conid vs conId
+
+The Java Client is inconsistent of its use of `conid` vs `conId`, this project makes no effort to change that. However, other node clients do.
+
+### connectAck
+
+The `connectAck` is documented as part of TWS API, even though some other clients use 'connected'.
+
+### disconnected
+
+There is no disconnected event. While TWS API includes a `connectionClosed` event, this not actually triggered in the Java Client under normal situations and therefore neither in this project. However, an `error` event is fired when the client is disconnected and the client can issue a `isConnected` action to check connectivity.
+
+### error events
+
+The TWS API defines three formats of error events: Exception, string or id/code/msg. Clients of this project will need to handle all three and there is no normalization as there are in other projects.
+
+### serverVersion
+
+`serverVersion` event trigger from a `serverVersion` action. Other projects might automatically fire a 'server' event.
+
+### historicalData
+
+Note that this project follows the TWS API and includes a `Bar` in `historicalData` events.
+
+### Constants and Helper Utilities
+
+This project does not include any of the Constants and Helper Classes from the TWS sample code as they are not included in the documented TWS API.
 
 
 
