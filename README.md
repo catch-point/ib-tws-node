@@ -340,6 +340,14 @@ This project follows the Java Client naming of a `contract` property on `Contrac
 
 The Java Client is inconsistent of its use of `conid` vs `conId`, this project makes no effort to change that. However, other node clients do.
 
+### enums
+
+The Java Client makes use of Java enums, which have both a string and integer representation. This project only recognizes the string representation of the enums, with one exception: `ocaType`.
+
+### ocaType
+
+The TWS API document says ocaType is a number and that is what this project expects. Even though the Java Client supports both int and enum.
+
 ### connectAck
 
 The `connectAck` is documented as part of TWS API, even though some other clients use 'connected'.

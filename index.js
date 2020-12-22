@@ -318,7 +318,7 @@ function isIncorrectPrimitive(type, value) {
         case 'Boolean':
             return value && typeof value != 'boolean';
         case 'String':
-            return value != null && typeof value != 'string';
+            return value != null && typeof value == 'object';
         default:
             return false;
     }
