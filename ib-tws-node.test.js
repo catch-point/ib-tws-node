@@ -1,6 +1,6 @@
 
 // vim: set filetype=javascript:
-// ib-tws-node/index.test.js
+// ib-tws-node.test.js
 /* 
  * Copyright (c) 2020 James Leigh
  * 
@@ -21,7 +21,7 @@
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
-const Client = require('./index.js');
+const Client = require('./ib-tws-node.js');
 const mkdtemp = util.promisify(fs.mkdtemp);
 const mkdir = util.promisify(fs.mkdir);
 
@@ -105,10 +105,6 @@ test('param array', async() => {
 test('param calculateImpliedVolatility', async() => {
     client.on('error', (reqId, code, msg) => {});
     await client.calculateImpliedVolatility(34, {}, "34.0", 16, [{tag:'name',value:'value'}]);
-});
-
-test('param String', async() => {
-    await expect(client.reqPnL(34, "string", 0)).rejects.toThrow();
 });
 
 test('param nested object', async() => {

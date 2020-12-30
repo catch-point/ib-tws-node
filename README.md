@@ -173,7 +173,8 @@ The ib-tws-node module exports a factory function to create a new client. It tak
 
 | Parameter Name | Parameter Value |
 |----------------|-----------------|
-|java|The java executable that is used to launch ib-tws-shell. If none is provided, it uses the JRE that will be used to launch TWS.|
+|launcher|An optional executable (or Array) to setup the environment and launch ib-tws-shell (command provided as arguments).|
+|env|Environment key-value pairs.|
 |java-home|The JRE that is used to launch TWS. If none is provided, an install4j JRE is searched for in the tws-path that would have been installed by TWS. Note that TWS cannot be run with just any JRE and depends on features provided with the JRE that came with the install.|
 |tws-api-jar|Points to the TwsApi.jar file that should be used when connecting to TWS. If none is provide it is searched for using tws-api-path.|
 |tws-api-path|Where to look for the TwsApi.jar file (if tws-api-jar is not provided). If not provided, it will look in C:\\TWS API, ~/IBJts, and a few other places.|
@@ -189,132 +190,12 @@ The command `help "Shell"` and `help "EClient"` ilst available commands in a `he
 
 `help "EWrapper"` list the events sent from the shell based an activity in TWS.
 
-#### login
+#### TWS Commands
 
-This opens the TWS (or Gateway) software and logins into the application.
+Additional commands are documented in [commands.md](https://github.com/jamesrdf/ib-tws-shell/blob/main/commands.md)
 
-The first parameter must be "live" or "paper", the second provides the credentials in Base64 UTF-8 encoding. It has the following base64 UTF-8 string properties.
-
-* FIXBase64UserName
-* FIXBase64Password
-* IBAPIBase64UserName
-* IBAPIBase64Password
-
-The third parameter to login is a JSON object with the properties from the table below.
-
-| Property | Description |
-| -------- | ------------|
-|AcceptIncomingConnectionAction|Only needed if TWS is on a different server. The default value of "manual" means that the user must explicitly configure IBC to automatically accept API connections from unknown computers, but it is safest to set this to "reject" and to explicitly configure TWS to specify which IP addresses are allowed to connnect to the API.|
-|AcceptNonBrokerageAccountWarning|If set to false, the user must manually accept this warning.|
-|AllowBlindTrading|Unless this is set to true, attempts to place an order for a contract for which the account has no market data subscription, the user must manually accept a dialog warning against such blind trading.|
-|DismissNSEComplianceNotice|If set to false, the user must manually dismiss this warning.|
-|ExistingSessionDetectedAction| When a user logs on to an IBKR account for trading purposes by any means, the IBKR account server checks to see whether the account is already logged in elsewhere. If so, a dialog is displayed to both the users that enables them to determine what happens next. Read on below to see how this setting instructs TWS how to proceed.|
-|FIX|Set to true if TWS should authenticate with Financial Information Exchange (FIX) protocol.|
-|LogComponents|Use to identify window names that are opened by TWS. Can be "activate", "open", "openclose", or "never".|
-|MinimizeMainWindow|Set to true to minimize TWS when it starts.|
-|ReadOnlyLogin|If ReadOnlyLogin is set to true, and the user is enrolled in IB's account security programme, the user will not be asked to supply the security code, and login to TWS will occur automatically in read-only mode: in this mode, placing or managing orders is not allowed. Otherwise, if the user is enrolled in IB's account security programme, the user must supply the relevant security code to complete the login. If the user is not enrolled in IB's account security programme, this setting is ignored.|
-|StoreSettingsOnServer|Set this to true to store a copy of the TWS settings on IB's servers as well as locally on your computer.  This enables you to run TWS on different computers with the same configuration, market data lines, etc.  Otherwise, running TWS on different computers will not share the same settings.|
-|SuppressInfoMessages|Set to false to log more intermediate information about window states.|
-
-##### ExistingSessionDetectedAction
-
-When a user logs on to an IBKR account for trading purposes by any means, the
-IBKR account server checks to see whether the account is already logged in
-elsewhere. If so, a dialog is displayed to both the users that enables them
-to determine what happens next. The `ExistingSessionDetectedAction` setting
-instructs TWS how to proceed when it displays one of these dialogs:
-
-  * If the existing TWS session is set to 'primary', the existing session
-    continues and the new session is not permitted to proceed.
-
-  * If the existing TWS session is set to 'primaryoverride', the existing
-    session terminates and the new session is permitted to proceed.
-
-  * If the new session is via TWS with
-    `ExistingSessionDetectedAction=secondary', the new TWS exits so that the
-    existing session is unaffected.
-
-  * If the existing TWS session is set to 'manual', the user must handle the
-    dialog.
-
-The difference between `primary` and `primaryoverride` is that a
-`primaryoverride` session can be taken over by a new `primary` or
-`primaryoverride` session, but a `primary` session cannot be taken over by
-any other session.
-
-When set to 'primary', if another TWS session is started and manually told to
-end the `primary` session, the `primary` session is automatically reconnected.
-
-The default is 'manual'.
-
-During a normal login process a "login" response is ussed with "TWO_FA_IN_PROGRESS" and later with "LOGGED_IN".
-
-#### enableAPI
-
-Open the Configuration dialogue and enables the API. The first parameter is the port number to listen on, the second parameter is true if the conneciton should be read-only, false otherwise. An "enableAPI" response is issued with the currently configured port number. However, TWS may need a little more time before it will be listening on the given port.
-
-#### saveSettings
-
-Saves the current settings.
-
-#### sleep
-
-Causes the shell to pause the given number of milliseconds before processing the next command.
-
-#### reconnectData
-
-Presses the Reconnect Date button in TWS.
-
-#### reconnectAccount
-
-Issues Ctl-Alt-R to TWS to recennect to the servers.
-
-#### eConnect
-
-This can be used with or without logging in to TWS (if another TWS instance is running). The parameters are as follows.
-
-* host
-* port number
-* true for extra authentication, false for normal authentication
-
-#### eDisconnect
-
-Disconnect the client API. This can be used to change clientId by calling eConnect afterwards.
-
-#### exit
-
-Close everything down and exit the shell
-
-#### serverVersion
-
-Issue a "serverVersion" response with the Host's version. Some of the API functionality might not be available in older Hosts and therefore it is essential to keep the TWS/Gateway and TWS API up to date.
-
-#### isConnected
-
-Issue a "isConnected" response.
-
-#### connectedHost
-
-Issue a "connectedHost" response.
-
-#### isUseV100Plus
-
-Issue a "isUseV100Plus" response, which is enabled by default.
-
-#### optionalCapabilities
-
-Provide a string value recognized by the API or issues a "optionalCapabilities" response of those values.
-
-#### faMsgTypeName
-
-Issue a "faMsgTypeName" response converting 1, 2, or 3 into "GROUPS", "PROFILES", and "ALIASES" respectively.
-
-#### getTwsConnectionTime
-
-Issue a "getTwsConnectionTime" response with the time the connection was established.
-
-Alternatives
-------------
+Troubleshooting
+---------------
 
 This project is not the only TWS API client for node and below are some differences.
 
@@ -332,13 +213,17 @@ This project has an expanded scope that include managing areas of the TWS softwa
 
 This project uses promises to reject parameter input errors and some i/o errors, while server errors use the `error` event. This helps to distinguish between client and server errors and make it easier to associate parameter errors with calling function.
 
-### ContractDetails.contract
+### Extra properties
 
-This project follows the Java Client naming of a `contract` property on `ContractDetails`, while other projects may call this project 'summary'.
+This project will reject unknown properties on objects passed into the action methods. So, if you use `conId` when it should be `conid` it will return a rejected assertion error promise.
 
 ### conid vs conId
 
-The Java Client is inconsistent of its use of `conid` vs `conId`, this project makes no effort to change that. However, other node clients do.
+The Java Client is inconsistent of its use of `conid` vs `conId`, this project makes no effort to change that.
+
+### ContractDetails.contract
+
+This project follows the Java Client naming of a `contract` property on `ContractDetails`, while other projects may call this project 'summary'.
 
 ### enums
 
@@ -350,7 +235,7 @@ The TWS API document says ocaType is a number and that is what this project expe
 
 ### connectAck
 
-The `connectAck` is documented as part of TWS API, even though some other clients use 'connected'.
+The `connectAck` is documented as part of TWS API, while some other clients may use 'connected', this project uses connectAck.
 
 ### disconnected
 
@@ -366,7 +251,7 @@ The TWS API defines three formats of error events: Exception, string or id/code/
 
 ### historicalData
 
-Note that this project follows the TWS API and includes a `Bar` in `historicalData` events.
+Note that this project follows the TWS API and includes a `Bar` object in `historicalData` events.
 
 ### Constants and Helper Utilities
 

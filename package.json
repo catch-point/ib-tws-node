@@ -1,11 +1,13 @@
 {
   "name": "ib-tws-node",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Node client library for for Interactive Broker's Trading Workstation and Gateway",
-  "main": "index.js",
+  "main": "ib-tws-node.js",
   "scripts": {
+    "postinstall": "./postinstall.js",
     "test": "jest",
-    "postinstall": "./postinstall.js"
+    "inspect": "node --inspect-brk node_modules/.bin/jest --runInBand",
+    "coverage": "jest --coverage --config='{\"coverageReporters\":[\"html\"]}'"
   },
   "repository": {
     "type": "git",
@@ -30,12 +32,15 @@
   },
   "homepage": "https://github.com/jamesrdf/ib-tws-node#readme",
   "bin": {
-    "ib-tws-shell": "./index.js"
+    "ib-tws-shell": "./ib-tws-shell.js"
   },
   "binary-dependencies": {
-    "lib/ib-tws-shell.jar": "https://github.com/jamesrdf/ib-tws-shell/releases/download/0.0.6/ib-tws-shell-0.0.6.jar"
+    "lib/ib-tws-shell.jar": "https://github.com/jamesrdf/ib-tws-shell/releases/download/0.0.7/ib-tws-shell-0.0.7.jar"
   },
   "devDependencies": {
     "jest": "^26.6.3"
+  },
+  "dependencies": {
+    "commander": "^6.2.1"
   }
 }
