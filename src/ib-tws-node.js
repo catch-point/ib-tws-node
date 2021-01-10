@@ -57,6 +57,7 @@ async function createInstanceAsync(settings) {
                 else emit_line(self, line);
             });
         } catch(err) {
+            console.error(chunk);
             self.emit('error', err);
         }
     });

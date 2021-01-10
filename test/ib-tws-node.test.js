@@ -21,7 +21,7 @@
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
-const Client = require('./ib-tws-node.js');
+const Client = require('../src/ib-tws-node.js');
 const mkdtemp = util.promisify(fs.mkdtemp);
 const mkdir = util.promisify(fs.mkdir);
 

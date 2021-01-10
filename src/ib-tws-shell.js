@@ -25,7 +25,7 @@ const { spawn } = require('child_process');
 const EventEmitter = require('events');
 const assert = require('assert').strict;
 const {Command} = require('commander');
-const pkg = require('./package.json');
+const pkg = require('../package.json');
 const HOME = require('os').homedir();
 const realpath = util.promisify(fs.realpath);
 const readFile = util.promisify(fs.readFile);
@@ -86,7 +86,7 @@ async function spawn_shell(settings, scripts, stdio) {
     const java_exe = await getJavaExe(settings);
     const launcher = [].concat(settings['launcher'])[0] || java_exe;
     const vm_args = await getVMOptions(settings);
-    const jar = path.resolve(module.filename, '..', 'lib/ib-tws-shell.jar');
+    const jar = path.resolve(module.filename, '../..', 'lib/ib-tws-shell.jar');
     const cp = await getClassPath(jar, settings);
     const args = [];
     if (settings['launcher']) {
