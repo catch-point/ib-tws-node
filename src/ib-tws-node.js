@@ -38,11 +38,13 @@ module.exports = createInstanceAsync;
 async function createInstanceAsync(settings) {
     const self = new EventEmitter();
     const shell = await ib_tws_shell(settings);
-    shell.on('error', err => {
-        self.emit('error', err);
-    }).on('exit', (code, signal) => {
+    const onerror = err => self.emit('error', err);
+    shell.on('exit', (code, signal) => {
         self.emit('exit', code, signal);
-    });
+    }).on('error', onerror);
+    shell.stdin.on('error', onerror);
+    shell.stdout.on('error', onerror);
+    shell.stderr.on('error', onerror);
     self.kill = signal => shell.kill(signal);
     self.pid = shell.pid;
     self.ref = () => shell.ref();
