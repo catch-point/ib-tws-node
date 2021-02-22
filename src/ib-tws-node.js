@@ -133,6 +133,10 @@ async function createInstanceAsync(settings) {
                 item.listeners.shift()();
             }
         }
+    }).on('disconnect', () => {
+        self.isConnected = async function() {
+            self.emit('isConnected', false);
+        };
     });
     return new Promise((ready, fail) => {
         self.once('helpEnd', ready);
