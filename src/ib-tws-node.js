@@ -139,6 +139,8 @@ async function createInstanceAsync(settings) {
         };
     });
     return new Promise((ready, fail) => {
+        self.once('exit', code => fail(Error(`Could not start ib-tws-shell exit with code ${code}`)));
+        self.once('error', err => typeof err == 'object' && fail(err));
         self.once('helpEnd', ready);
         send(shell, 'help', []).catch(fail);
     }).then(() => self);
