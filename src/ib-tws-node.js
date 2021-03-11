@@ -37,9 +37,11 @@ module.exports = createInstanceAsync;
  */
 async function createInstanceAsync(settings) {
     const self = new EventEmitter();
-    const shell = await ib_tws_shell(settings);
     const onerror = err => self.emit('error', err);
+    const shell = await ib_tws_shell(settings);
+    let connected = true;
     shell.on('exit', (code, signal) => {
+        connected = false;
         self.emit('exit', code, signal);
     }).on('error', onerror);
     shell.stdin.on('error', onerror);
@@ -142,6 +144,7 @@ async function createInstanceAsync(settings) {
         self.once('exit', code => fail(Error(`Could not start ib-tws-shell exit with code ${code}`)));
         self.once('error', err => typeof err == 'object' && fail(err));
         self.once('helpEnd', ready);
+        if (!connected) fail(Error("Could not start ib-tws-shell"));
         send(shell, 'help', []).catch(fail);
     }).then(() => self);
 }
