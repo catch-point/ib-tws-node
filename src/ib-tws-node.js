@@ -39,9 +39,17 @@ async function createInstanceAsync(settings) {
     const self = new EventEmitter();
     const onerror = err => self.emit('error', err);
     const shell = await ib_tws_shell(settings);
-    let connected = true;
+    const schema = {};
+    let finished = false;
     shell.on('exit', (code, signal) => {
-        connected = false;
+        finished = true;
+        Object.keys(schema).forEach(key => {
+            const item = schema[key];
+            delete schema[key];
+            while (item && !item.complete && item.listeners.length) {
+                item.listeners.shift()();
+            }
+        });
         self.emit('exit', code, signal);
     }).on('error', onerror);
     shell.stdin.on('error', onerror);
@@ -65,7 +73,6 @@ async function createInstanceAsync(settings) {
             self.emit('error', err);
         }
     });
-    const schema = {};
     self.on('help', (method_or_type, name, type, default_value) => {
         if (type) {
             if (schema[method_or_type].object_properties) schema[method_or_type].object_properties[name] = type;
@@ -96,16 +103,25 @@ async function createInstanceAsync(settings) {
             };
             Object.assign(self, {
                 async [item.action_name]() {
-                    await completeItem(shell, schema, item.action_name);
-                    const param_values = Array.prototype.slice.call(arguments);
-                    if (param_values.length != item.param_types.length) {
-                        assert.fail(`Incorrect parameters for ${item.action_name}(${item.param_types.join(',')})`)
+                    if (!finished) {
+                        await completeItem(shell, schema, item.action_name);
+                        const param_values = Array.prototype.slice.call(arguments);
+                        if (!finished && param_values.length != item.param_types.length) {
+                            assert.fail(`Incorrect parameters for ${item.action_name}(${item.param_types.join(',')})`)
+                        }
+                        await Promise.all(item.param_types.map(async(param_type, i) => {
+                            await assertType(shell, schema, param_type, param_values[i]);
+                        }));
+                        if (!finished) await send(shell, item.action_name, param_values);
                     }
-                    await Promise.all(item.param_types.map(async(param_type, i) => {
-                        await assertType(shell, schema, param_type, param_values[i]);
-                    }));
-                    await send(shell, item.action_name, param_values);
-                    return self;
+                    if (!finished || item.action_name == 'exit') {
+                        return self;
+                    } else if (item.action_name == 'isConnected') {
+                        self.emit('isConnected', false);
+                        return self;
+                    } else {
+                        throw Error(`ib-tws-shell has closed and cannot call ${item.action_name}`);
+                    }
                 }
             });
         } else if (method_or_type == "actions") {
@@ -135,17 +151,13 @@ async function createInstanceAsync(settings) {
                 item.listeners.shift()();
             }
         }
-    }).on('disconnect', () => {
-        self.isConnected = async function() {
-            self.emit('isConnected', false);
-        };
     });
     return new Promise((ready, fail) => {
         self.once('exit', code => fail(Error(`Could not start ib-tws-shell exit with code ${code}`)));
         self.once('error', err => typeof err == 'object' && fail(err));
         self.once('helpEnd', ready);
-        if (!connected) fail(Error("Could not start ib-tws-shell"));
-        send(shell, 'help', []).catch(fail);
+        if (finished) fail(Error("Could not start ib-tws-shell"));
+        else send(shell, 'help', []).catch(fail);
     }).then(() => self);
 }
 
@@ -165,7 +177,7 @@ function emit_line(emitter, line) {
 async function completeItem(shell, schema, name) {
     const item_name = name.charAt(0) == '[' ? name.substring(1, name.length-1) : name;
     const item = schema[item_name];
-    if (!item.complete) {
+    if (item && !item.complete) {
         await new Promise((ready, fail) => {
             if (item.complete) return ready();
             item.listeners.push(ready);
@@ -193,7 +205,9 @@ async function send(shell, call_name, args) {
  */
 async function assertType(shell, schema, param_type, param_value) {
     const type = await completeItem(shell, schema, param_type);
-    if (param_type.charAt(0) == '[') {
+    if (!type) {
+        return; // shell has already exited
+    } else if (param_type.charAt(0) == '[') {
         if (Array.isArray(param_value)) {
             return param_value.reduce(async(promise, value) => {
                 await promise;
