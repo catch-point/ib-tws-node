@@ -107,7 +107,7 @@ async function createInstanceAsync(settings) {
                         await completeItem(shell, schema, item.action_name);
                         const param_values = Array.prototype.slice.call(arguments);
                         if (!finished && param_values.length != item.param_types.length) {
-                            assert.fail(`Incorrect parameters for ${item.action_name}(${item.param_types.join(',')})`)
+                            assert.fail(`Incorrect parameters ${JSON.stringify(param_values)} for ${item.action_name}(${item.param_types.join(',')})`)
                         }
                         await Promise.all(item.param_types.map(async(param_type, i) => {
                             await assertType(shell, schema, param_type, param_values[i]);
