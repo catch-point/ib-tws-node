@@ -91,7 +91,7 @@ await client.exit();
 Shell
 -----
 
-This library uses the ib-tws-shell and includes a `ib-tws-shell` script that can be used to learn more about the API. A particularly useful command in the `help` command that can be combined with a method name or type to print out the parameters or property available. For example if you cannot remember if it's `conid` or `conId`, use the shell to quickly find out. However, the client would reject a promise if you get the properties wrong anyway.
+This library uses the ib-tws-shell and includes a `ib-tws-shell` script that can be used to learn more about the API. A particularly useful command is the `help` command that can be combined with a method name or type to print out the parameters or property available. For example if you cannot remember if it's `conid` or `conId`, use the shell to quickly find out. However, the client would reject a promise if you get the properties wrong anyway.
 
 ```
 $ ib-tws-shell

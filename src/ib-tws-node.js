@@ -165,9 +165,15 @@ async function createInstanceAsync(settings) {
  * Parses the line from the shell and emits the event
  */
 function emit_line(emitter, line) {
-    const record = line.split('\t');
-    const name = record[0];
-    const args = record.slice(1).map(json => JSON.parse(json));
+    const record = line.match(/^\s*(\S+)\s+([\S\s]*)$/);
+    const name = record && record[1] || line;
+    const args = record ? record[2].split('\t').map(json => {
+        try {
+            return JSON.parse(json);
+        } catch (e) {
+            return json;
+        }
+    }) : [];
     return emitter.emit(name, ...args);
 }
 

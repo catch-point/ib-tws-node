@@ -137,7 +137,11 @@ async function findJavaRuntimeEnvironment(settings) {
         await readFile(path.resolve(install4j, 'pref_jre.cfg'), 'utf8').catch(err => {}),
         await readFile(path.resolve(install4j, 'inst_jre.cfg'), 'utf8').catch(err => {})
     ].map(jre => jre && jre.trim()).filter(jre => jre);
-    return search.reduce(async(p, jre) => await p || await access(jre).then(() => jre, err => {}), null);
+    const jre = await search.reduce(async(p, jre) => {
+        return await p || await access(jre).then(() => jre, err => {});
+    }, null);
+    if (jre && !settings['silence']) console.error(`java-home\t"${jre}"`);
+    return jre;
 }
 
 /**
@@ -158,7 +162,14 @@ async function getInstall4j(settings) {
             path.resolve(jts_path, 'IB Gateway', '.install4j'),
             path.resolve(jts_path, 'Trader Workstation', '.install4j')
         ];
-        return search.reduce(async(p, i4j) => await p || await access(i4j).then(() => i4j, err => {}), null);
+        const i4j = await search.reduce(async(p, i4j) => {
+            return await p || await access(i4j).then(() => i4j, err => {});
+        }, null);
+        if (i4j && !settings['silence']) {
+            if (!settings['tws-path']) console.error(`tws-path\t"${jts_path}"`);
+            if (version && !settings['tws-version']) console.error(`tws-version\t"${version}"`);
+        }
+        return i4j;
     }, null);
 }
 
@@ -324,8 +335,11 @@ async function getJtsVersion(jts_path, settings) {
 async function getTwsApiJar(settings) {
     if (settings["tws-api-jar"])
         return settings["tws-api-jar"];
-    if (settings["tws-api-path"])
-        return searchFor(settings["tws-api-path"], "TwsApi.jar");
+    if (settings["tws-api-path"]) {
+        const jar = await searchFor(settings["tws-api-path"], "TwsApi.jar");
+        if (jar && !settings['silence']) console.error(`tws-api-jar\t"${jar}"`);
+        return jar;
+    }
     const tws_api_path_search = [
         "C:\\TWS API",
         path.resolve(HOME, "IBJts"),
@@ -335,10 +349,12 @@ async function getTwsApiJar(settings) {
         path.resolve(HOME, "lib"),
         path.resolve(HOME, "libs")
     ];
-    return tws_api_path_search.reduce(async(found, dir) => {
+    const jar = await tws_api_path_search.reduce(async(found, dir) => {
         if (await found) return found;
         else return searchFor(dir, "TwsApi.jar");
     }, null);
+    if (jar && !settings['silence']) console.error(`tws-api-jar\t"${jar}"`);
+    return jar;
 }
 
 /**
