@@ -1,6 +1,6 @@
 {
   "name": "ib-tws-node",
-  "version": "0.0.15",
+  "version": "0.1.1",
   "description": "Node client library for for Interactive Broker's Trading Workstation and Gateway",
   "main": "src/ib-tws-node.js",
   "scripts": {
@@ -32,13 +32,13 @@
   },
   "homepage": "https://github.com/jamesrdf/ib-tws-node#readme",
   "bin": {
-    "ib-tws-shell": "./src/ib-tws-shell.js"
+    "ib-tws-json": "./src/ib-tws-json.js"
   },
   "binary-dependencies": {
-    "lib/ib-tws-shell.jar": "https://github.com/jamesrdf/ib-tws-shell/releases/download/0.0.9/ib-tws-shell-0.0.9.jar"
+    "lib/ib-tws-json.jar": "https://github.com/jamesrdf/ib-tws-json/releases/download/v0.1.1/ib-tws-json-0.1.1.jar"
   },
   "devDependencies": {
-    "jest": "^26.6.3"
+    "jest": "^28.1.3"
   },
   "dependencies": {
     "commander": "^6.2.1"

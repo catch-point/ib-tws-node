@@ -6,9 +6,9 @@ Introduction
 
 The TWS API is a simple yet powerful interface through which Interactive Broker clients can automate their trading strategies, request market data and monitor your account balance and portfolio in real time.
 
-This project uses the official Interactive Broker's Java Client, providing a Node interface bridge. The Java Client and TWS is run in a separate process using the JRE provided with the local TWS installation.
+This project uses the official Interactive Broker's Java Client, providing a Node interface bridge. The Java Client and TWS is can run in the same or a separate process using the JRE provided with the local TWS installation.
 
-This project differentiates from other client libraries by integrating the TWS Desktop or Gateway into the same JVM running the TWS Java Client. Whereby providing a single interface to control Interactive Broker's Trader Workstation / Gateway from within a NodeJS system.
+This project differentiates from other client libraries by extending the TWS Desktop or Gateway (in the same JVM running the TWS Client) to include a JSON API. Whereby providing a non-binary interface to Interactive Broker's TWS API for use in a NodeJS system.
 
 Requirements
 ------------
@@ -16,22 +16,17 @@ Requirements
 Users must agree to the terms of the Interactive Broker license, download their software and Java Client API.
 
 * The TWS API is an interface to TWS or IB Gateway, and as such requires network connectivity to a running instance of one of these programs. They can be downloaded here: https://www.interactivebrokers.com/en/index.php?f=14099#tws-software
-* To obtain the TWS API source and sample code to C:\TWS API or ~/IBJts, download the API Components from here: http://interactivebrokers.github.io
-* A working knowledge of the API programming language.
-* This project makes use of gradle build tool. See https://gradle.org/
-
-TWS needs to operate in English so that the various dialogues can be recognised. You can set TWS's language by starting it manually (ie without passing a password) and selecting the language on the initial login dialog. TWS will remember this language setting when you subsequently use it.
+* To obtain the TWS API Java source and sample code download the API Components from here: http://interactivebrokers.github.io and save it to  to C:\TWS API or ~/IBJts
+* A working knowledge of the TWS API programming language.
 
 Note that you do not need an IBKR account to try this out, as you can use IBKR's Free Trial offer, for which there is a link at the top of the homepage on their website.
 
 API Client
 ----------
 
-A unique feature of ib-tws-node is the ability to manage TWS` GUI, including logging in, enabling API, and dismissing common dialogues. However, ib-tws-node can be used without TWS, but it still needs TwsApi.jar!
-
 The client makes heavy use of promises *and* events. Every method returns a promise to validate the input before passing it along to TWS, even though none of the methods return anything useful in those promises. All responses are found in events on the client.
 
-Methods on the client can also vary slightly depending on the version the the TWS API available. Use the `help "EClient"` and `help "Shell"` commands in the shell to list available methods, or simply go straight to the documentation here: https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClient.html
+Methods on the client can also vary slightly depending on the version the the TWS API available. Use the `help "EClient"` and `help "Shell"` commands in the shell to list available methods, or simply go straight to the documentation here for the latest: https://interactivebrokers.github.io/tws-api/classIBApi_1_1EClient.html
 
 Events from the client can also be listed using the `help "EWrapper"` command and documented here: https://interactivebrokers.github.io/tws-api/interfaceIBApi_1_1EWrapper.html
 
@@ -40,23 +35,14 @@ Below is an example of using TWS with ib-tws-node, where TWS is installed in the
 ```
 const Client = require('ib-tws-node');
 
-const client = await Client({silence: false});
+const client = await Client({'tws-port': 7496});
 
-client.on('error', console.error);
-await client.login("live", {}, {}); // opens TWS login window
-await client.enableAPI(7496, false); // enables API in Global Settings
-const port = await new Promise(cb => client.once('enableAPI', cb)); // API enabled
+client.on('error', console.log);
 
-// TWS might need moment after enabling the API before it is ready to connect
 let nextValidId = await new Promise((ready, abort) => {
-    client.on('isConnected', connected => {
-        if (!connected) {
-            client.sleep(100).catch(abort);
-            client.eConnect("localhost", port, 0, false).catch(abort);
-            client.isConnected().catch(abort);
-        }
-    }).once('nextValidId', ready);
-    client.isConnected().catch(abort);
+    client.once('nextValidId', ready);
+    client.eConnect(0, false).catch(abort);
+    client.on('error', (e_str_msg, code, msg) => !isFinite(e_str_msg) && abort(e_str_msg));
 });
 
 const id = nextValidId++;
@@ -74,6 +60,7 @@ await client.placeOrder(id, {
 });
 const order_status = await new Promise((ready, abort) => {
     let order_status;
+    client.on('error', (e_str_msg, code, msg) => !isFinite(e_str_msg) && abort(e_str_msg));
     client.on('orderStatus', (orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice) => {
         if (id == orderId) {
             order_status = status;
@@ -91,11 +78,10 @@ await client.exit();
 Shell
 -----
 
-This library uses the ib-tws-shell and includes a `ib-tws-shell` script that can be used to learn more about the API. A particularly useful command is the `help` command that can be combined with a method name or type to print out the parameters or property available. For example if you cannot remember if it's `conid` or `conId`, use the shell to quickly find out. However, the client would reject a promise if you get the properties wrong anyway.
+This library uses the ib-tws-json and includes a `ib-tws-json` script that can be used to learn more about the API. A particularly useful command is the `help` command that can be combined with a method name or type to print out the parameters or property available. For example if you cannot remember if it's `conid` or `conId`, use the shell to quickly find out. However, the client would reject a promise if you get the properties wrong anyway.
 
 ```
-$ ib-tws-shell
-Welcome to ib-tws-shell! Type 'help' to see a list of commands or 'login' to open TWS.
+$ ib-tws-json --tws-port 7496
 > help "Contract"
 help	"Contract"	"comboLegs"	"[ComboLeg]"	[]
 help	"Contract"	"comboLegsDescrip"	"String"	null
@@ -133,18 +119,13 @@ help	"OrderCondition"	"volume"	"int"	null
 helpEnd	"OrderCondition"
 > exit
 ```
-All the methods available on the ib-tws-node client are also available from the ib-tws-shell. Making it a useful tool to try things out in TWS before committing it in code.
+All the methods available on the ib-tws-node client are also available from the ib-tws-json. Making it a useful tool to try things out in TWS before committing it in code.
 
 Below we quickly confirm that `REL` orders are not supported on the TSE exchange.
 
 ```
-$ ib-tws-shell --silence
-> login
-login	"TWO_FA_IN_PROGRESS"
-login	"LOGGED_IN"
-> enableAPI 7496 false
-enableAPI	7496
-> eConnect "localhost" 7496 0 false
+$ ib-tws-json --tws-port 7496
+> eConnect 0 false
 connectAck
 managedAccounts	"U112233"
 nextValidId	1
@@ -173,53 +154,47 @@ The ib-tws-node module exports a factory function to create a new client. It tak
 
 | Parameter Name | Parameter Value |
 |----------------|-----------------|
-|launcher|An optional executable (or Array) to setup the environment and launch ib-tws-shell (command provided as arguments).|
+|launcher|An optional executable (or Array) to setup the environment and launch ib-tws-json (command provided as arguments).|
 |env|Environment key-value pairs.|
-|java-home|The JRE that is used to launch TWS. If none is provided, an install4j JRE is searched for in the tws-path that would have been installed by TWS. Note that TWS cannot be run with just any JRE and depends on features provided with the JRE that came with the install.|
+|java-home|The JRE that is used to launch TWS. If none is provided, an install4j JRE is searched for in the jts-install-dir that would have been installed by TWS. Note that TWS cannot be run with just any JRE and depends on features provided with the JRE that came with the install.|
 |tws-api-jar|Points to the TwsApi.jar file that should be used when connecting to TWS. If none is provide it is searched for using tws-api-path.|
 |tws-api-path|Where to look for the TwsApi.jar file (if tws-api-jar is not provided). If not provided, it will look in C:\\TWS API, ~/IBJts, and a few other places.|
-|tws-path|The install location of TWS Desktop or Gateway. If using an offline version (or Gateway) this can point to the folder with the version number. When not provided, the system will look in the default location for Gateway and (if not found) TWS Desktop.|
-|tws-settings-path|Every running instance must have a unique tws-settings-path, which defaults to `~/Jts`.|
-|tws-version|If the tws-path is not provided this can help choose which TWS instance to launch. It is recommended to use an offline TWS install to give project contributors time to test new TWS releases.|
-|silence|Don't log anything, just report API responses.|
+|jts-install-dir|The install location of TWS Desktop or Gateway. If using an offline version (or Gateway) this can point to the folder with the version number. When not provided, the system will look in the default location for Gateway and (if not found) TWS Desktop.|
+|jts-exe-name|When launching TWS, use this script name in jts-install-dir to launch it.|
+|jts-config-dir|Every running instance must have a unique tws-settings-path, which defaults to `~/Jts`.|
+|tws-host|If not localhost, use this to provide a remote hostname running TWS|
+|tws-port|The port number that TWS is configured to run the TWS API on.|
+|json-host|If different from tws-host, the remote host running the JSON API.|
+|json-port|The JSON API port, if different from the default.|
+|json-port-offset|Alternatively, specificy the json-port using an offset from the tws-port.|
 
 
 #### help
 
-The command `help "Shell"` and `help "EClient"` ilst available commands in a `help` response. Other parameters string can be given to provide the schema available for those methods or types. `helpEnd` is sent it indicate the response is complete.
+The command `help` and `help "EClient"` ilst available commands in a `help` response. Other parameters string can be given to provide the schema available for those methods or types. `helpEnd` is sent it indicate the response is complete.
 
 `help "EWrapper"` list the events sent from the shell based an activity in TWS.
 
 #### TWS Commands
 
-Additional commands are documented in [commands.md](https://github.com/jamesrdf/ib-tws-shell/blob/main/commands.md)
+Additional commands are documented in [ib-tws-json](https://github.com/jamesrdf/ib-tws-json/)
 
 Troubleshooting
 ---------------
 
 This project is not the only TWS API client for node and below are some differences.
 
-### TWS GUI
-
-This project has an expanded scope that include managing areas of the TWS software that are not included in the TWS API. This make this client particularly useful for deployments to a headless server or an automated trading system. Included in this project is the ability to (among other things):
-
-* It can be initiate TWS or Gateway to startup or shutdown;
-* Automatically fill in your username and password and click the Login button in the Login dialogue;
-* Ensure attempts to logon from another computer or device do not succeed;
-* Participate in Two Factor Authentication using IBKR Mobile in such a way that users who miss the 2FA alert on their device will automatically have another opportunity without needing be at the computer;
-* Handle various dialogue boxes, to keep things running smoothly with no user involvement;
-
 ### Promises
 
-This project uses promises to reject parameter input errors and some i/o errors, while server errors use the `error` event. This helps to distinguish between client and server errors and make it easier to associate parameter errors with calling function.
+This project uses promises to reject parameter input errors and some i/o errors, on the server and uses the `error` event for errors from TWS API. This helps to distinguish between client and server errors and make it easier to associate parameter errors with calling function.
 
 ### Extra properties
 
-This project will reject unknown properties on objects passed into the action methods. So, if you use `conId` when it should be `conid` it will return a rejected assertion error promise.
+This library will reject unknown properties on objects passed into the action methods. So, if you use `conId` when it should be `conid` it will return a rejected assertion error promise.
 
 ### conid vs conId
 
-The Java Client is inconsistent of its use of `conid` vs `conId`, this project makes no effort to change that.
+The TWS API Java Client is inconsistent of its use of `conid` vs `conId`, this project makes no effort to change that.
 
 ### ContractDetails.contract
 

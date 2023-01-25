@@ -2,7 +2,7 @@
 // vim: set filetype=javascript:
 // ib-tws-node.test.js
 /* 
- * Copyright (c) 2020 James Leigh
+ * Copyright (c) 2020-2023 James Leigh
  * 
  * This program is free software: you can redistribute it and/or modify  
  * it under the terms of the GNU General Public License as published by  
@@ -25,18 +25,16 @@ const Client = require('../src/ib-tws-node.js');
 const mkdtemp = util.promisify(fs.mkdtemp);
 const mkdir = util.promisify(fs.mkdir);
 
-let tmp_dir;
 let client;
 
+jest.setTimeout(1200000); // 2 minutes timeout for human input
+
 beforeEach(async() => {
-    await mkdir('tmp', {recursive: true});
-    tmp_dir = await mkdtemp('tmp/ib-tws-node.test');
-    client = await Client({silence: false, 'tws-settings-path': tmp_dir});
+    client = await Client({'tws-port': 7496});
 });
 
 afterEach(async() => {
     await client.exit();
-    deleteFolderRecursive(tmp_dir);
 });
 
 function deleteFolderRecursive(path) {
@@ -119,32 +117,14 @@ test('param boolean', async() => {
     await expect(client.reqContractDetails(1, {includeExpired: 'yes'})).rejects.toThrow();
 });
 
-test.skip('login', done => {
-    jest.setTimeout(60000); // 60 second timeout for human input
-    client.on('login', state => {
-        expect(state).toMatch(/TWO_FA_IN_PROGRESS|LOGGED_IN/);
-        if (state == 'LOGGED_IN') done();
-    });
-    client.login();
-});
-
-test.skip('placeOrder', async() => {
-    jest.setTimeout(120000); // 2 minutes timeout for human input
+test.only('placeOrder', async() => {
     client.on('error', console.log);
-    await client.login("live", {}, {}); // opens TWS login window
-    await client.enableAPI(7496, false); // enables API in Global Settings
-    const port = await new Promise(cb => client.once('enableAPI', cb)); // API enabled
 
     // TWS might need moment after enabling the API before it is ready to connect
     let nextValidId = await new Promise((ready, abort) => {
-        client.on('isConnected', connected => {
-            if (!connected) {
-                client.sleep(100).catch(abort);
-                client.eConnect("localhost", port, 0, false).catch(abort);
-                client.isConnected().catch(abort);
-            }
-        }).once('nextValidId', ready);
-        client.isConnected().catch(abort);
+        client.on('error', (e_str_msg, code, msg) => !isFinite(e_str_msg) && abort(e_str_msg));
+        client.once('nextValidId', ready);
+        client.eConnect(1234, false).catch(abort);
     });
 
     const id = nextValidId++;
@@ -158,10 +138,12 @@ test.skip('placeOrder', async() => {
     }, {
         action: 'BUY',
         totalQuantity: 1,
-        orderType: 'MIDPRICE'
+        orderType: 'MIDPRICE',
+        transmit: false
     });
     const order_status = await new Promise((ready, abort) => {
         let order_status;
+        client.on('error', (e_str_msg, code, msg) => !isFinite(e_str_msg) && abort(e_str_msg));
         client.on('orderStatus', (orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice) => {
             if (id == orderId) {
                 order_status = status;
@@ -169,7 +151,7 @@ test.skip('placeOrder', async() => {
                 else console.log(orderId, status, filled, lastFillPrice);
             }
         });
-        setTimeout(() => ready(order_status), 10000);
+        setTimeout(() => ready(order_status), 1000);
         client.reqOpenOrders().catch(abort);
     });
 });

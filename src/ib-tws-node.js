@@ -1,7 +1,7 @@
 // vim: set filetype=javascript:
 // ib-tws-node.js
 /* 
- * Copyright (c) 2020 James Leigh
+ * Copyright (c) 2020-2023 James Leigh
  * 
  * This program is free software: you can redistribute it and/or modify  
  * it under the terms of the GNU General Public License as published by  
@@ -20,10 +20,11 @@
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
 const { spawn } = require('child_process');
 const EventEmitter = require('events');
 const assert = require('assert').strict;
-const ib_tws_shell = require('./ib-tws-shell.js');
+const ib_tws_json = require('./ib-tws-json.js');
 const HOME = require('os').homedir();
 const realpath = util.promisify(fs.realpath);
 const readFile = util.promisify(fs.readFile);
@@ -38,10 +39,10 @@ module.exports = createInstanceAsync;
 async function createInstanceAsync(settings) {
     const self = new EventEmitter();
     const onerror = err => self.emit('error', err);
-    const shell = await ib_tws_shell(settings);
+    const shell = await createShell(settings);
     const schema = {};
     let finished = false;
-    shell.on('exit', (code, signal) => {
+    shell.on('close', () => {
         finished = true;
         Object.keys(schema).forEach(key => {
             const item = schema[key];
@@ -50,18 +51,13 @@ async function createInstanceAsync(settings) {
                 item.listeners.shift()();
             }
         });
-        self.emit('exit', code, signal);
+        self.emit('exit');
     }).on('error', onerror);
-    shell.stdin.on('error', onerror);
-    shell.stdout.on('error', onerror);
-    shell.stderr.on('error', onerror);
-    self.kill = signal => shell.kill(signal);
-    self.pid = shell.pid;
+    self.kill = signal => shell.destroy();
     self.ref = () => shell.ref();
     self.unref = () => shell.unref();
     let buffer = '';
-    shell.stdout.setEncoding('utf8');
-    shell.stdout.on('data', chunk => {
+    shell.on('data', chunk => {
         try {
             const lines = (buffer ? `buffer${chunk}` : chunk).split('\n');
             lines.forEach((line, i) => {
@@ -120,7 +116,7 @@ async function createInstanceAsync(settings) {
                         self.emit('isConnected', false);
                         return self;
                     } else {
-                        throw Error(`ib-tws-shell has closed and cannot call ${item.action_name}`);
+                        throw Error(`ib-tws-json has closed and cannot call ${item.action_name}`);
                     }
                 }
             });
@@ -153,12 +149,150 @@ async function createInstanceAsync(settings) {
         }
     });
     return new Promise((ready, fail) => {
-        self.once('exit', code => fail(Error(`Could not start ib-tws-shell exit with code ${code}`)));
+        self.once('exit', code => fail(Error(`Could not start ib-tws-json exit with code ${code}`)));
         self.once('error', err => typeof err == 'object' && fail(err));
         self.once('helpEnd', ready);
-        if (finished) fail(Error("Could not start ib-tws-shell"));
+        if (finished) fail(Error("Could not start ib-tws-json"));
         else send(shell, 'help', []).catch(fail);
     }).then(() => self);
+}
+
+/**
+ * Creates a socket or socket-like option to communicate with TWS over ib-tws-json
+ */
+async function createShell(settings) {
+    const json_port_offset = +settings['json-port-offset'] || 100;
+    const tws_ports = settings['tws-host'] ? [] : +settings['tws-port'] ? [+settings['tws-port']] :
+        [4002,7497,4001,7496];
+    const tws_port = +settings['tws-port'] || !settings['tws-host'] && await scanLocalPorts(tws_ports);
+    const tws_host = settings['tws-host'] || null;
+    const json_ports = settings['json-host'] ? [] : +settings['json-port'] ? [+settings['json-port']] :
+        tws_ports.map(port=>json_port_offset+port);
+    const json_port = +settings['json-port'] || +settings['tws-port'] && json_port_offset+settings['tws-port'] ||
+        !settings['json-host'] && await scanLocalPorts(json_ports);
+    const json_host = settings['json-host'] || tws_host;
+    if (json_port) {
+        const json_socket = await openSocket(json_host, json_port).catch(e=>null);
+        if (json_socket) return json_socket;
+    }
+    if (tws_port && !settings['json-port']) {
+        // check if local tws port in use to see if we need to launch TWS first
+        const inused = !tws_host && await scanLocalPorts([tws_port]);
+        if (tws_host || inused) {
+            // try json_port again (maybe it was just starting up)
+            const json_socket = json_port && await openSocket(json_host, json_port).catch(e=>null);
+            if (json_socket) return json_socket;
+            // create a stand-alone ib-tws-json client to connect to TWS
+            return standAloneJsonShell(tws_port, settings);
+        }
+    }
+    if (!settings['no-launch'] && !json_host && !settings['interactive'] && !settings['no-prompt']) {
+        // launch TWS using ib-tws-json
+        await launchTws(json_port_offset, settings);
+        // wait for local json port to come online
+        if (await waitForLocalPorts(json_ports, settings)) {
+            return createShell({...settings, 'no-launch': true});
+        }
+    }
+    throw Error(`Could not connect to IBKR TWS API, make sure it is running and able to login`);
+}
+
+/**
+ * Opens a remote socket and waits until it is connected
+ */
+async function openSocket(host, port) {
+    return new Promise(ready => {
+        const socket = net.createConnection(port, host);
+        socket.setEncoding('utf8');
+        socket.once('connect', () => ready(socket));
+        socket.once('error', () => ready(null));
+    });
+}
+
+/**
+ * Launch ib-tws-json in stand alone mode to communicate with TWS API
+ */
+async function standAloneJsonShell(tws_port, settings) {
+    const process = await ib_tws_json({
+        ...settings,
+        'tws-port': tws_port,
+        'interactive': true,
+        'no-prompt': true
+    });
+    process.destroy = () => process.kill();
+    process.on('exit', () => process.emit('close'));
+    process.write = data => process.stdin.write(data);
+    process.end = data => process.stdin.end(data);
+    process.stdin.on('error', e => process.emit('error', e));
+    process.stdin.on('drain', () => process.emit('drain'));
+    process.stderr.setEncoding('utf8');
+    process.stderr.on('error', e => process.emit('error', e));
+    process.stderr.on('data', console.error);
+    process.stdout.setEncoding('utf8');
+    process.stdout.on('error', e => process.emit('error', e));
+    process.stdout.on('data', chunk => process.emit('data', chunk));
+    return process;
+}
+
+/**
+ * Repeatedly scans the given ports until settings.timeout is reached or a port is in use
+ */
+async function waitForLocalPorts(ports, settings) {
+    let ms = 1000;
+    await new Promise(cont => setTimeout(cont, ms));
+    const end = Date.now() + (settings['timeout']||120000); // 2min timeout for two factor login
+    while (Date.now() < end) {
+        const port = await ports.reduce(async(memo, port) => {
+            const socket = await openSocket(null, port);
+            if (!socket) return memo;
+            socket.destroy();
+            return port;
+        }, 0);
+        if (port) return port;
+        else await new Promise(cont => setTimeout(cont, ms+=ms));
+    }
+    return 0;
+}
+
+/**
+ * Scans the given ports and returns a port that is in use or 0
+ */
+async function scanLocalPorts(ports) {
+    return ports.reduce(async(memo, port) => {
+        if (await memo) return memo;
+        else return new Promise(done => {
+            const server = net.createServer({ pauseOnConnect: true });
+            server.once('listening', () => {
+                done(memo); // not is use
+                server.close();
+            });
+            server.once('error', e => {
+                if (e.code == 'EADDRINUSE') done(port);
+                else done(memo); // security error?
+                server.close();
+            });
+            server.listen(port);
+        });
+    }, 0);
+}
+
+/**
+ * Tells ib-tws-json to launch TWS with the JSON API extension
+ */
+async function launchTws(json_port_offset, settings) {
+    const process = await ib_tws_json({
+        ...settings,
+        'launch': true,
+        'json-port-offset': json_port_offset
+    });
+    process.stdin.destroy();
+    process.stderr.setEncoding('utf8');
+    process.stderr.on('error', console.error);
+    process.stderr.on('data', console.error);
+    process.stdout.setEncoding('utf8');
+    process.stdout.on('error', console.error);
+    process.stdout.on('data', console.error);
+    await process.connected && new Promise(ready => process.once('exit', ready));
 }
 
 /**
@@ -201,9 +335,9 @@ async function completeItem(shell, schema, name) {
  */
 async function send(shell, call_name, args) {
     const call = [call_name].concat(args.map(arg => JSON.stringify(arg))).concat('\n');
-    const room = shell.stdin.write(call.join('\t'));
-    if (call_name == 'exit') return new Promise(cb => shell.once('exit', cb));
-    if (!room) return new Promise(cb => shell.stdin.once('drain', cb));
+    const room = shell.write(call.join('\t'));
+    if (call_name == 'exit') return new Promise(cb => shell.once('close', cb));
+    if (!room) return new Promise(cb => shell.once('drain', cb));
 }
 
 /**

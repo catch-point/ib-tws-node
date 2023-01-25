@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // vim: set filetype=javascript:
-// ib-tws-shell.js
+// ib-tws-json.js
 /* 
- * Copyright (c) 2020 James Leigh
+ * Copyright (c) 2020-2023 James Leigh
  * 
  * This program is free software: you can redistribute it and/or modify  
  * it under the terms of the GNU General Public License as published by  
@@ -33,27 +33,45 @@ const access = util.promisify(fs.access);
 const readdir = util.promisify(fs.readdir);
 
 /**
- * If launched directly, open a shell to the underlying ib-tws-shell java process.
+ * If launched directly, open a shell to the underlying ib-tws-json java process.
  * Otherwise, export a factory function to create a new process
  */
 if (require.main === module) {
     const program = new Command();
-    program.name('ib-tws-shell').usage('[options] [script files...]')
+    program.name('ib-tws-json').usage('[options] [script files...]')
         .storeOptionsAsProperties(false)
         .version(pkg.version, '-v, --version', 'output the current version')
         .option("--launcher <exe>", "Launch script used to setup shell environment")
-        .option("--tws-version <version>", "The major version number of the installed TWS software")
-        .option("--tws-path <path>", "Location of Jts/ibgateway/Trader Workstation/IB Gateway folder to use")
-        .option("--tws-settings-path <path>", "Where TWS will read/store settings")
-        .option("--tws-api-path <path>", "The TwsApi directory to be searched for TwsApi.jar")
-        .option("--tws-api-jar <path>", "The TwsApi.jar filename")
+		.option("--install", "Installs the TWS JSON extension from TWS")
+		.option("--uninstall", "Uninstalls the TWS JSON extension from TWS")
+		.option("--launch", "Installs the TWS JSON extension and starts TWS before exiting")
+		.option("-i, --interactive", "Enter interactive client mode")
+		.option("-I, --no-prompt", "Don't prompt for input when in interactive mode")
+		.option("--tws-api-path <path>", "The TwsApi directory to be searched for TwsApi.jar")
+		.option("-j, --tws-api-jar <file>", "The TwsApi.jar filename")
+		.option("--tws-host <inet>", "Hostname or IP running TWS")
+		.option("-p, --tws-port <integer>", "Port TWS API is running on")
+		.option("--json-port <integer>", "Server port for TWS JSON API to listen on")
+		.option("--json-port-offset <integer>", "Server JSON port offset from tws-port")
+		.option("--json-inet <inet>", "Server local network interface to listen on for TWS JSON API")
+		.option("--jts-exe-name <filename>", "The primary launch filename installed by TWS software")
+		.option("--jts-install-dir <path>",
+				"Location of Jts/ibgateway/Trader Workstation/IB Gateway folder to use")
+		.option("--jts-config-dir <path>", "Where TWS will read/store settings")
         .option("--java-home <path>", "The location of the jre to launch")
-        .option("--no-prompt", "Don't prompt for input")
-        .option("-s, --silence", "Don't log to stderr")
-        .option("-i, --interactive", "Enter interactive mode after executing a script file")
         .option("-h, --help", "This message");
     program.parse(process.argv);
-    const settings = program.opts();
+    const settings = program.options.reduce((settings, option) => {
+        const value = program.opts()[option.attributeName()];
+        if (value != null) {
+            if (option.long.startsWith('--no-')) {
+                settings[option.long.substring(2)] = !value;
+            } else if (option.long.startsWith('--')) {
+                settings[option.long.substring(2)] = value;
+            }
+        }
+        return settings;
+    }, {});
     if (settings['help']) {
         program.outputHelp();
     } else {
@@ -80,13 +98,12 @@ async function create_shell(settings) {
 }
 
 /**
- * Spawns a ib-tws-shell process with the given settings
+ * Spawns a ib-tws-json process with the given settings
  */
 async function spawn_shell(settings, scripts, stdio) {
     const java_exe = await getJavaExe(settings);
     const launcher = [].concat(settings['launcher'])[0] || java_exe;
-    const vm_args = await getVMOptions(settings);
-    const jar = path.resolve(module.filename, '../..', 'lib/ib-tws-shell.jar');
+    const jar = path.resolve(module.filename, '../..', 'lib/ib-tws-json.jar');
     const cp = await getClassPath(jar, settings);
     const args = [];
     if (settings['launcher']) {
@@ -96,19 +113,21 @@ async function spawn_shell(settings, scripts, stdio) {
     args.push('-cp');
     args.push(cp);
     args.push('com.meerkattrading.tws.Shell');
-    if (settings['tws-settings-path']) {
-        args.push('--tws-settings-path');
-        args.push(settings['tws-settings-path']);
-    }
-    if (settings['no-prompt']) {
-        args.push('--no-prompt');
-    }
-    if (settings['silence']) {
-        args.push('--silence');
-    }
-    if (settings['interactive']) {
-        args.push('--interactive');
-    }
+    [ "install", "uninstall", "launch", "interactive", "no-prompt" ].forEach(opt => {
+        if (settings[opt]) {
+            args.push(`--${opt}`);
+        }
+    });
+    [
+        "tws-api-path", "tws-api-jar", "tws-host", "tws-port", "json-port",
+        "json-port-offset", "json-inet", "jts-exe-name", "jts-install-dir",
+        "jts-config-dir"
+    ].forEach(opt => {
+        if (settings[opt]) {
+            args.push(`--${opt}`);
+            args.push(settings[opt]);
+        }
+    });
     if (scripts && scripts.length) {
         args.push(...scripts);
     }
@@ -140,7 +159,6 @@ async function findJavaRuntimeEnvironment(settings) {
     const jre = await search.reduce(async(p, jre) => {
         return await p || await access(jre).then(() => jre, err => {});
     }, null);
-    if (jre && !settings['silence']) console.error(`java-home\t"${jre}"`);
     return jre;
 }
 
@@ -165,66 +183,8 @@ async function getInstall4j(settings) {
         const i4j = await search.reduce(async(p, i4j) => {
             return await p || await access(i4j).then(() => i4j, err => {});
         }, null);
-        if (i4j && !settings['silence']) {
-            if (!settings['tws-path']) console.error(`tws-path\t"${jts_path}"`);
-            if (version && !settings['tws-version']) console.error(`tws-version\t"${version}"`);
-        }
         return i4j;
     }, null);
-}
-
-/**
- * Reads the JVM arguments in the TWS install directory
- */
-async function getVMOptions(settings) {
-    const vmoptions = await getVMOptionsFile(settings);
-    if (!vmoptions) return [];
-    const contents = await readFile(vmoptions, 'utf8');
-    return contents.split(/\n|\r/).map(line => line.trim()).filter(line => line && !line.startsWith('#'));
-}
-
-/**
- * Finds the vmoptions file in the TWS install directory
- */
-async function getVMOptionsFile(settings) {
-    const vmoptions = await getJtsPathSearch(settings).reduce(async(found, jts_path) => {
-        if (await found) return found;
-        const version = await getJtsVersion(jts_path, settings);
-        const isGateway = jts_path.match(/gateway/i);
-        const search = version ? [
-            path.resolve(jts_path, version, isGateway ? "ibgateway.vmoptions" : "tws.vmoptions"),
-            path.resolve(jts_path, isGateway ? "ibgateway.vmoptions" : "tws.vmoptions"),
-            path.resolve(jts_path, "ibgateway", version, "ibgateway.vmoptions"),
-            path.resolve(jts_path, "IB Gateway " + version, "ibgateway.vmoptions"),
-            path.resolve(jts_path, "Trader Workstation " + version, "tws.vmoptions"),
-            path.resolve(HOME, "Jts",(isGateway ? "ibgateway-" : "tws-") + version + ".vmoptions"),
-            path.resolve(jts_path, "ibgateway", "ibgateway.vmoptions"),
-            path.resolve(jts_path, "IB Gateway", "ibgateway.vmoptions"),
-            path.resolve(jts_path, "Trader Workstation", "tws.vmoptions"),
-            path.resolve(HOME, "Jts", isGateway ? "ibgateway.vmoptions" : "tws.vmoptions")
-        ] : [
-            path.resolve(jts_path, isGateway ? "ibgateway.vmoptions" : "tws.vmoptions"),
-            path.resolve(HOME, "Jts", (isGateway ? "ibgateway-" : "tws-") + version + ".vmoptions"),
-            path.resolve(jts_path, "ibgateway", "ibgateway.vmoptions"),
-            path.resolve(jts_path, "IB Gateway", "ibgateway.vmoptions"),
-            path.resolve(jts_path, "Trader Workstation", "tws.vmoptions"),
-            path.resolve(HOME, "Jts", isGateway ? "ibgateway.vmoptions" : "tws.vmoptions")
-        ];
-        return search.reduce(async(found, vmoptions) => {
-            if (await found) return found;
-            return access(vmoptions).then(() => vmoptions, () => null);
-        }, null);
-    }, null);
-    if (vmoptions) {
-        return vmoptions;
-    } else if (!settings["tws-path"]) {
-        console.error("Could not find vmoptions try --tws-path=...");
-    } else if (!settings["tws-version"]) {
-        console.error("Could not find vmoptions try --tws-version=...");
-    } else {
-        console.error("Could not find vmoptions");
-    }
-    return null;
 }
 
 /**
@@ -232,10 +192,6 @@ async function getVMOptionsFile(settings) {
  */
 async function getClassPath(jar, settings) {
     const jars = [jar];
-    const jts_jars = await getJtsJars(settings);
-    if (jts_jars.length) {
-        jars.push(...jts_jars);
-    }
     const tws_api_jar = await getTwsApiJar(settings);
     if (tws_api_jar) {
         jars.push(tws_api_jar);
@@ -244,59 +200,6 @@ async function getClassPath(jar, settings) {
     }
     const path_separator = process.platform.toLowerCase() == 'win32' ? ';' : ':';
     return jars.join(path_separator);
-}
-
-/**
- * Identify all the jars needed to launch TWS
- */
-async function getJtsJars(settings) {
-    const jars_dir = await getJtsJarsDir(settings);
-    if (jars_dir == null) return [];
-    const jars = await listNumerically(jars_dir);
-    return Object.values(jars.reduce((jars, jar) => {
-        const key = jar.replace(/[^a-zA-Z0-9][0-9].*$/,'');
-        if (!jars[key]) jars[key] = path.resolve(jars_dir, jar);
-        return jars;
-    }, {}));
-}
-
-/**
- * Finds the jars directory in the TWS install
- */
-async function getJtsJarsDir(settings) {
-    const jars_dir = await getJtsPathSearch(settings).reduce(async(found, jts_path) => {
-        if (await found) return found;
-        const version = await getJtsVersion(jts_path, settings);
-        const search = version ? [
-            path.resolve(jts_path, version, "jars"),
-            path.resolve(jts_path, "ibgateway", version, "jars"),
-            path.resolve(jts_path, "IB Gateway " + version, "jars"),
-            path.resolve(jts_path, "Trader Workstation " + version, "jars"),
-            path.resolve(jts_path, "jars"),
-            path.resolve(jts_path, "ibgateway", "jars"),
-            path.resolve(jts_path, "IB Gateway", "jars"),
-            path.resolve(jts_path, "Trader Workstation", "jars")
-        ] : [
-            path.resolve(jts_path, "jars"),
-            path.resolve(jts_path, "ibgateway", "jars"),
-            path.resolve(jts_path, "IB Gateway", "jars"),
-            path.resolve(jts_path, "Trader Workstation", "jars")
-        ];
-        return search.reduce(async(found, jars) => {
-            if (await found) return found;
-            return access(jars).then(() => jars, () => null);
-        }, null);
-    }, null);
-    if (jars_dir) {
-        return jars_dir;
-    } else if (!settings["tws-path"]) {
-        throw Error("Could not find jars try --tws-path=...");
-    } else if (!settings["tws-version"]) {
-        throw Error("Could not find jars try --tws-version=...");
-    } else {
-        throw Error("Could not find jars");
-    }
-    return null;
 }
 
 /**
@@ -337,7 +240,6 @@ async function getTwsApiJar(settings) {
         return settings["tws-api-jar"];
     if (settings["tws-api-path"]) {
         const jar = await searchFor(settings["tws-api-path"], "TwsApi.jar");
-        if (jar && !settings['silence']) console.error(`tws-api-jar\t"${jar}"`);
         return jar;
     }
     const tws_api_path_search = [
@@ -353,7 +255,6 @@ async function getTwsApiJar(settings) {
         if (await found) return found;
         else return searchFor(dir, "TwsApi.jar");
     }, null);
-    if (jar && !settings['silence']) console.error(`tws-api-jar\t"${jar}"`);
     return jar;
 }
 
