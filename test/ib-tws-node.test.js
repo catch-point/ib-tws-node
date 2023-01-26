@@ -30,7 +30,7 @@ let client;
 jest.setTimeout(1200000); // 2 minutes timeout for human input
 
 beforeEach(async() => {
-    client = await Client({'tws-port': 7496});
+    client = await Client({'tws-port': 7496, 'tws-host': 'localhost'});
 });
 
 afterEach(async() => {
@@ -117,7 +117,7 @@ test('param boolean', async() => {
     await expect(client.reqContractDetails(1, {includeExpired: 'yes'})).rejects.toThrow();
 });
 
-test.only('placeOrder', async() => {
+test.skip('placeOrder', async() => {
     client.on('error', console.log);
 
     // TWS might need moment after enabling the API before it is ready to connect

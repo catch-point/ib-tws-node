@@ -92,7 +92,7 @@ if (require.main === module) {
  * Factory function to create a new child process
  */
 async function create_shell(settings) {
-    const shell = await spawn_shell({...settings, "no-prompt": true}, [], 'pipe');
+    const shell = await spawn_shell(settings, [], 'pipe');
     shell.stderr.pipe(process.stderr);
     return shell;
 }

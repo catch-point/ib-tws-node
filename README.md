@@ -75,6 +75,14 @@ const order_status = await new Promise((ready, abort) => {
 await client.exit();
 ```
 
+Modes
+-----
+
+There are three modes to run ib-tws-node.
+ 1. Install IB TWS JSON extension using `ib-tws-json --install` and have it running when using ib-tws-node.
+ 2. If the extension is not installed, ib-tws-node will use an external JVM to run the TWS API Java Client.
+ 3. If IBKR TWS is not running, ib-tws-node will launch it with the IB TWS JSON extension installed.
+
 Shell
 -----
 
@@ -162,7 +170,7 @@ The ib-tws-node module exports a factory function to create a new client. It tak
 |jts-install-dir|The install location of TWS Desktop or Gateway. If using an offline version (or Gateway) this can point to the folder with the version number. When not provided, the system will look in the default location for Gateway and (if not found) TWS Desktop.|
 |jts-exe-name|When launching TWS, use this script name in jts-install-dir to launch it.|
 |jts-config-dir|Every running instance must have a unique tws-settings-path, which defaults to `~/Jts`.|
-|tws-host|If not localhost, use this to provide a remote hostname running TWS|
+|tws-host|If not localhost, use this to provide a remote hostname running TWS and prevent ib-tws-node from launching a local TWS.|
 |tws-port|The port number that TWS is configured to run the TWS API on.|
 |json-host|If different from tws-host, the remote host running the JSON API.|
 |json-port|The JSON API port, if different from the default.|
