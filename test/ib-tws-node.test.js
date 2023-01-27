@@ -30,7 +30,7 @@ let client;
 jest.setTimeout(1200000); // 2 minutes timeout for human input
 
 beforeEach(async() => {
-    client = await Client({'tws-port': 7496, 'tws-host': 'localhost'});
+    client = await Client({twsApiPort: 7496, twsApiHost: 'localhost'});
 });
 
 afterEach(async() => {

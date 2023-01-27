@@ -161,21 +161,21 @@ async function createInstanceAsync(settings) {
  * Creates a socket or socket-like option to communicate with TWS over ib-tws-json
  */
 async function createShell(settings) {
-    const json_port_offset = +settings['json-port-offset'] || 100;
-    const tws_ports = settings['tws-host'] ? [] : +settings['tws-port'] ? [+settings['tws-port']] :
+    const json_port_offset = +settings['jsonApiPortOffset'] || 100;
+    const tws_ports = settings['twsApiHost'] ? [] : +settings['twsApiPort'] ? [+settings['twsApiPort']] :
         [4002,7497,4001,7496];
-    const tws_port = +settings['tws-port'] || !settings['tws-host'] && await scanLocalPorts(tws_ports);
-    const tws_host = settings['tws-host'] || null;
-    const json_ports = settings['json-host'] ? [] : +settings['json-port'] ? [+settings['json-port']] :
+    const tws_port = +settings['twsApiPort'] || !settings['twsApiHost'] && await scanLocalPorts(tws_ports);
+    const tws_host = settings['twsApiHost'] || null;
+    const json_ports = settings['jsonApiHost'] ? [] : +settings['jsonApiPort'] ? [+settings['jsonApiPort']] :
         tws_ports.map(port=>json_port_offset+port);
-    const json_port = +settings['json-port'] || +settings['tws-port'] && json_port_offset+settings['tws-port'] ||
-        !settings['json-host'] && await scanLocalPorts(json_ports);
-    const json_host = settings['json-host'] || tws_host;
+    const json_port = +settings['jsonApiPort'] || +settings['twsApiPort'] && json_port_offset+settings['twsApiPort'] ||
+        !settings['jsonApiHost'] && await scanLocalPorts(json_ports);
+    const json_host = settings['jsonApiHost'] || tws_host;
     if (json_port) {
         const json_socket = await openSocket(json_host, json_port).catch(e=>null);
         if (json_socket) return json_socket;
     }
-    if (tws_port && !settings['json-port']) {
+    if (tws_port && !settings['jsonApiPort']) {
         // check if local tws port in use to see if we need to launch TWS first
         const inused = !tws_host && await scanLocalPorts([tws_port]);
         if (tws_host || inused) {
@@ -186,12 +186,12 @@ async function createShell(settings) {
             return standAloneJsonShell(tws_port, settings);
         }
     }
-    if (!settings['no-launch'] && !json_host && !settings['interactive'] && !settings['no-prompt']) {
+    if (!settings['noLaunch'] && !json_host && !settings['interactive'] && !settings['noPrompt']) {
         // launch TWS using ib-tws-json
         await launchTws(json_port_offset, settings);
         // wait for local json port to come online
         if (await waitForLocalPorts(json_ports, settings)) {
-            return createShell({...settings, 'no-launch': true});
+            return createShell({...settings, 'noLaunch': true});
         }
     }
     throw Error(`Could not connect to IBKR TWS API, make sure it is running and able to login`);
@@ -214,10 +214,14 @@ async function openSocket(host, port) {
  */
 async function standAloneJsonShell(tws_port, settings) {
     const process = await ib_tws_json({
-        ...settings,
-        'tws-port': tws_port,
         'interactive': true,
-        'no-prompt': true
+        'no-prompt': true,
+        'launcher': settings.launcher,
+        'tws-api-path': settings.twsApiPath,
+        'tws-api-jar': settings.twsApiJar,
+        'tws-api-port': tws_port,
+        'tws-api-host': settings.twsApiHost,
+        'java-home': settings.javaHome
     });
     process.destroy = () => process.kill();
     process.on('exit', () => process.emit('close'));
@@ -281,9 +285,19 @@ async function scanLocalPorts(ports) {
  */
 async function launchTws(json_port_offset, settings) {
     const process = await ib_tws_json({
-        ...settings,
         'launch': true,
-        'json-port-offset': json_port_offset
+        'launcher': settings.launcher,
+        'tws-api-path': settings.twsApiPath,
+        'tws-api-jar': settings.twsApiJar,
+        'tws-api-port': tws_port,
+        'tws-api-host': settings.twsApiHost,
+        'json-api-port': settings.jsonApiPort,
+        'json-api-port-offset': json_port_offset,
+        'json-api-inet': settings.jsonApiInet || settings.jsonApiHost,
+        'jts-exe-name': settings.jtsExeName,
+        'jts-install-dir': settings.jtsInstallDir,
+        'jts-config-dir': settings.jtsConfigDir,
+        'java-home': settings.javaHome,
     });
     process.stdin.destroy();
     process.stderr.setEncoding('utf8');

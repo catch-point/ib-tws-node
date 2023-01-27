@@ -46,14 +46,14 @@ if (require.main === module) {
 		.option("--uninstall", "Uninstalls the TWS JSON extension from TWS")
 		.option("--launch", "Installs the TWS JSON extension and starts TWS before exiting")
 		.option("-i, --interactive", "Enter interactive client mode")
-		.option("-I, --no-prompt", "Don't prompt for input when in interactive mode")
+		.option("--no-prompt", "Don't prompt for input when in interactive mode")
 		.option("--tws-api-path <path>", "The TwsApi directory to be searched for TwsApi.jar")
 		.option("-j, --tws-api-jar <file>", "The TwsApi.jar filename")
-		.option("--tws-host <inet>", "Hostname or IP running TWS")
-		.option("-p, --tws-port <integer>", "Port TWS API is running on")
-		.option("--json-port <integer>", "Server port for TWS JSON API to listen on")
-		.option("--json-port-offset <integer>", "Server JSON port offset from tws-port")
-		.option("--json-inet <inet>", "Server local network interface to listen on for TWS JSON API")
+		.option("--tws-api-host <inet>", "Hostname or IP running TWS")
+		.option("-p, --tws-api-port <integer>", "Port TWS API is running on")
+		.option("--json-api-port <integer>", "Server port for TWS JSON API to listen on")
+		.option("--json-api-port-offset <integer>", "Server JSON port offset from tws-api-port")
+		.option("--json-api-inet <inet>", "Server local network interface to listen on for TWS JSON API")
 		.option("--jts-exe-name <filename>", "The primary launch filename installed by TWS software")
 		.option("--jts-install-dir <path>",
 				"Location of Jts/ibgateway/Trader Workstation/IB Gateway folder to use")
@@ -119,8 +119,8 @@ async function spawn_shell(settings, scripts, stdio) {
         }
     });
     [
-        "tws-api-path", "tws-api-jar", "tws-host", "tws-port", "json-port",
-        "json-port-offset", "json-inet", "jts-exe-name", "jts-install-dir",
+        "tws-api-path", "tws-api-jar", "tws-api-host", "tws-api-port", "json-api-port",
+        "json-api-port-offset", "json-api-inet", "jts-exe-name", "jts-install-dir",
         "jts-config-dir"
     ].forEach(opt => {
         if (settings[opt]) {
