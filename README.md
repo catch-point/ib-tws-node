@@ -35,7 +35,7 @@ Below is an example of using TWS with ib-tws-node, where TWS is installed in the
 ```
 const Client = require('ib-tws-node');
 
-const client = await Client({'tws-port': 7496});
+const client = await Client({twsApiPort: 7496});
 
 client.on('error', console.log);
 
@@ -89,7 +89,7 @@ Shell
 This library uses the ib-tws-json and includes a `ib-tws-json` script that can be used to learn more about the API. A particularly useful command is the `help` command that can be combined with a method name or type to print out the parameters or property available. For example if you cannot remember if it's `conid` or `conId`, use the shell to quickly find out. However, the client would reject a promise if you get the properties wrong anyway.
 
 ```
-$ ib-tws-json --tws-port 7496
+$ ib-tws-json --tws-api-port 7496
 > help "Contract"
 help	"Contract"	"comboLegs"	"[ComboLeg]"	[]
 help	"Contract"	"comboLegsDescrip"	"String"	null
@@ -132,7 +132,7 @@ All the methods available on the ib-tws-node client are also available from the 
 Below we quickly confirm that `REL` orders are not supported on the TSE exchange.
 
 ```
-$ ib-tws-json --tws-port 7496
+$ ib-tws-json --tws-api-port 7496
 > eConnect 0 false
 connectAck
 managedAccounts	"U112233"
@@ -164,17 +164,17 @@ The ib-tws-node module exports a factory function to create a new client. It tak
 |----------------|-----------------|
 |launcher|An optional executable (or Array) to setup the environment and launch ib-tws-json (command provided as arguments).|
 |env|Environment key-value pairs.|
-|java-home|The JRE that is used to launch TWS. If none is provided, an install4j JRE is searched for in the jts-install-dir that would have been installed by TWS. Note that TWS cannot be run with just any JRE and depends on features provided with the JRE that came with the install.|
-|tws-api-jar|Points to the TwsApi.jar file that should be used when connecting to TWS. If none is provide it is searched for using tws-api-path.|
-|tws-api-path|Where to look for the TwsApi.jar file (if tws-api-jar is not provided). If not provided, it will look in C:\\TWS API, ~/IBJts, and a few other places.|
-|jts-install-dir|The install location of TWS Desktop or Gateway. If using an offline version (or Gateway) this can point to the folder with the version number. When not provided, the system will look in the default location for Gateway and (if not found) TWS Desktop.|
-|jts-exe-name|When launching TWS, use this script name in jts-install-dir to launch it.|
-|jts-config-dir|Every running instance must have a unique tws-settings-path, which defaults to `~/Jts`.|
-|tws-host|If not localhost, use this to provide a remote hostname running TWS and prevent ib-tws-node from launching a local TWS.|
-|tws-port|The port number that TWS is configured to run the TWS API on.|
-|json-host|If different from tws-host, the remote host running the JSON API.|
-|json-port|The JSON API port, if different from the default.|
-|json-port-offset|Alternatively, specificy the json-port using an offset from the tws-port.|
+|javaHome|The JRE that is used to launch TWS. If none is provided, an install4j JRE is searched for in the jts-install-dir that would have been installed by TWS. Note that TWS cannot be run with just any JRE and depends on features provided with the JRE that came with the install.|
+|twsApiJar|Points to the TwsApi.jar file that should be used when connecting to TWS. If none is provide it is searched for using twsApiPath.|
+|twsApiPath|Where to look for the TwsApi.jar file (if tws-api-jar is not provided). If not provided, it will look in C:\\TWS API, ~/IBJts, and a few other places.|
+|jtsInstallDir|The install location of TWS Desktop or Gateway. If using an offline version (or Gateway) this can point to the folder with the version number. When not provided, the system will look in the default location for Gateway and (if not found) TWS Desktop.|
+|jtsExeName|When launching TWS, use this script name in jts-install-dir to launch it.|
+|jtsConfigDir|Every running instance must have a unique tws-settings-path, which defaults to `~/Jts`.|
+|twsApiHost|If not localhost, use this to provide a remote hostname running TWS and prevent ib-tws-node from launching a local TWS.|
+|twsApiPort|The port number that TWS is configured to run the TWS API on.|
+|jsonApiPost|If different from twsApiHost, the remote host running the JSON API.|
+|jsonApiPort|The JSON API port, if different from the default.|
+|jsonApiPortOffset|Alternatively, specificy the jsonApiPort using an offset from the twsApiPort.|
 
 
 #### help
