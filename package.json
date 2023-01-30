@@ -1,6 +1,6 @@
 {
   "name": "ib-tws-node",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Node client library for for Interactive Broker's Trading Workstation and Gateway",
   "main": "src/ib-tws-node.js",
   "scripts": {

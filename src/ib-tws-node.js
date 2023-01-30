@@ -220,7 +220,8 @@ async function standAloneJsonShell(tws_port, settings) {
         'tws-api-jar': settings.twsApiJar,
         'tws-api-port': tws_port,
         'tws-api-host': settings.twsApiHost,
-        'java-home': settings.javaHome
+        'java-home': settings.javaHome,
+        'env': settings.env
     });
     process.destroy = () => process.kill();
     process.on('exit', () => process.emit('close'));
@@ -297,6 +298,7 @@ async function launchTws(json_port_offset, settings) {
         'jts-install-dir': settings.jtsInstallDir,
         'jts-config-dir': settings.jtsConfigDir,
         'java-home': settings.javaHome,
+        'env': settings.env
     });
     process.stdin.destroy();
     process.stderr.setEncoding('utf8');
