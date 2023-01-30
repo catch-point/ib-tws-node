@@ -41,9 +41,8 @@ async function createInstanceAsync(settings) {
     const onerror = err => self.emit('error', err);
     const shell = await createShell(settings);
     const schema = {};
-    let finished = false;
+    const finished = () => shell.destroyed || shell.killed;
     shell.on('close', () => {
-        finished = true;
         Object.keys(schema).forEach(key => {
             const item = schema[key];
             delete schema[key];
@@ -99,18 +98,18 @@ async function createInstanceAsync(settings) {
             };
             Object.assign(self, {
                 async [item.action_name]() {
-                    if (!finished) {
+                    if (!finished()) {
                         await completeItem(shell, schema, item.action_name);
                         const param_values = Array.prototype.slice.call(arguments);
-                        if (!finished && param_values.length != item.param_types.length) {
+                        if (!finished() && param_values.length != item.param_types.length) {
                             assert.fail(`Incorrect parameters ${JSON.stringify(param_values)} for ${item.action_name}(${item.param_types.join(',')})`)
                         }
                         await Promise.all(item.param_types.map(async(param_type, i) => {
                             await assertType(shell, schema, param_type, param_values[i]);
                         }));
-                        if (!finished) await send(shell, item.action_name, param_values);
+                        if (!finished()) await send(shell, item.action_name, param_values);
                     }
-                    if (!finished || item.action_name == 'exit') {
+                    if (!finished() || item.action_name == 'exit') {
                         return self;
                     } else if (item.action_name == 'isConnected') {
                         self.emit('isConnected', false);
@@ -152,7 +151,7 @@ async function createInstanceAsync(settings) {
         self.once('exit', code => fail(Error(`Could not start ib-tws-json exit with code ${code}`)));
         self.once('error', err => typeof err == 'object' && fail(err));
         self.once('helpEnd', ready);
-        if (finished) fail(Error("Could not start ib-tws-json"));
+        if (finished()) fail(Error("Could not start ib-tws-json"));
         else send(shell, 'help', []).catch(fail);
     }).then(() => self);
 }
