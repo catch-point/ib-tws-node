@@ -32,6 +32,7 @@ const access = util.promisify(fs.access);
 const readdir = util.promisify(fs.readdir);
 
 module.exports = createInstanceAsync;
+module.exports.logger = console;
 
 /**
  * Async factory function to create a new client object
@@ -64,7 +65,7 @@ async function createInstanceAsync(settings) {
                 else emit_line(self, line);
             });
         } catch(err) {
-            console.error(chunk);
+            module.exports.logger.error(chunk);
             self.emit('error', err);
         }
     });
@@ -191,9 +192,14 @@ async function createShell(settings) {
         // wait for local json port to come online
         if (await waitForLocalPorts(json_ports, settings)) {
             return createShell({...settings, 'noLaunch': true});
+        } else {
+            throw Error(`ib-tws-node could not launch IBKR TWS on ${json_ports.join(', ')}`);
         }
+    } else if (json_port) {
+        throw Error(`ib-tws-node could not connect to ${json_host}:${json_port}`);
+    } else {
+        throw Error(`Could not connect to IBKR TWS API, make sure it is running and able to login`);
     }
-    throw Error(`Could not connect to IBKR TWS API, make sure it is running and able to login`);
 }
 
 /**
@@ -231,7 +237,7 @@ async function standAloneJsonShell(tws_port, settings) {
     process.stdin.on('drain', () => process.emit('drain'));
     process.stderr.setEncoding('utf8');
     process.stderr.on('error', e => process.emit('error', e));
-    process.stderr.on('data', console.error);
+    process.stderr.on('data', module.exports.logger.error);
     process.stdout.setEncoding('utf8');
     process.stdout.on('error', e => process.emit('error', e));
     process.stdout.on('data', chunk => process.emit('data', chunk));
@@ -302,11 +308,11 @@ async function launchTws(json_port_offset, settings) {
     });
     process.stdin.destroy();
     process.stderr.setEncoding('utf8');
-    process.stderr.on('error', console.error);
-    process.stderr.on('data', console.error);
+    process.stderr.on('error', module.exports.logger.error);
+    process.stderr.on('data', module.exports.logger.error);
     process.stdout.setEncoding('utf8');
-    process.stdout.on('error', console.error);
-    process.stdout.on('data', console.error);
+    process.stdout.on('error', module.exports.logger.error);
+    process.stdout.on('data', module.exports.logger.error);
     await process.connected && new Promise(ready => process.once('exit', ready));
 }
 
