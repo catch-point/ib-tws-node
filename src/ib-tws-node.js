@@ -249,9 +249,9 @@ async function standAloneJsonShell(tws_port, settings) {
  */
 async function waitForLocalPorts(ports, settings) {
     let ms = 1000;
-    await new Promise(cont => setTimeout(cont, ms));
     const end = Date.now() + (settings['timeout']||120000); // 2min timeout for two factor login
     while (Date.now() < end) {
+        await new Promise(cont => setTimeout(cont, ms+=ms));
         const port = await ports.reduce(async(memo, port) => {
             const socket = await openSocket(null, port);
             if (!socket) return memo;
@@ -259,7 +259,6 @@ async function waitForLocalPorts(ports, settings) {
             return port;
         }, 0);
         if (port) return port;
-        else await new Promise(cont => setTimeout(cont, ms+=ms));
     }
     return 0;
 }
