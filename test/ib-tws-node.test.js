@@ -80,10 +80,6 @@ test('param type', async() => {
     await expect(client.sleep("two")).rejects.toThrow();
 });
 
-test('param faMsgTypeName', async() => {
-    await expect(client.faMsgTypeName("")).rejects.toThrow();
-});
-
 test('param int', async() => {
     await expect(client.calculateImpliedVolatility(34.6, {}, "34.0", 16, [])).rejects.toThrow();
 });

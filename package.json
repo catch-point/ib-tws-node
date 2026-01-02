@@ -1,6 +1,6 @@
 {
   "name": "ib-tws-node",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Node client library for for Interactive Broker's Trading Workstation and Gateway",
   "main": "src/ib-tws-node.js",
   "scripts": {
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jamesrdf/ib-tws-node.git"
+    "url": "git+https://github.com/catch-point/ib-tws-node.git"
   },
   "keywords": [
     "ib",
@@ -28,14 +28,14 @@
   "author": "James Leigh",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/jamesrdf/ib-tws-node/issues"
+    "url": "https://github.com/catch-point/ib-tws-node/issues"
   },
-  "homepage": "https://github.com/jamesrdf/ib-tws-node#readme",
+  "homepage": "https://github.com/catch-point/ib-tws-node#readme",
   "bin": {
     "ib-tws-json": "./src/ib-tws-json.js"
   },
   "binary-dependencies": {
-    "lib/ib-tws-json.jar": "https://github.com/jamesrdf/ib-tws-json/releases/download/v1.0.0/ib-tws-json-1.0.0.jar"
+    "lib/ib-tws-json.jar": "https://github.com/catch-point/ib-tws-json/releases/download/v1.1.1/ib-tws-json-1.1.1.jar"
   },
   "devDependencies": {
     "jest": "^28.1.3"

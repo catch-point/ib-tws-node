@@ -185,7 +185,7 @@ The command `help` and `help "EClient"` ilst available commands in a `help` resp
 
 #### TWS Commands
 
-Additional commands are documented in [ib-tws-json](https://github.com/jamesrdf/ib-tws-json/)
+Additional commands are documented in [ib-tws-json](https://github.com/catch-point/ib-tws-json/)
 
 Troubleshooting
 ---------------
