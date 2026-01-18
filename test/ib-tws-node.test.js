@@ -65,7 +65,7 @@ test('help', done => {
 });
 
 test('error', done => {
-    client.on('error', (reqId, code, msg) => {
+    client.on('error', (reqId, time, code, msg, advancedOrderRejectJson) => {
         expect(msg).toContain('Not connected');
         done();
     });
@@ -111,6 +111,22 @@ test('param enum', async() => {
 
 test('param boolean', async() => {
     await expect(client.reqContractDetails(1, {includeExpired: 'yes'})).rejects.toThrow();
+});
+
+test('requestFA Groups', async() => {
+    await expect(client.requestFA(1)).rejects.toThrow();
+});
+
+test('requestFA Aliases', async() => {
+    await expect(client.requestFA(3)).rejects.toThrow();
+});
+
+test('requestFA Groups', async() => {
+    await expect(client.requestFA('GROUPS'));
+});
+
+test('requestFA Aliases', async() => {
+    await expect(client.requestFA('ALIASES'));
 });
 
 test.skip('placeOrder', async() => {
