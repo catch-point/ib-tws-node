@@ -42,7 +42,7 @@ client.on('error', console.log);
 let nextValidId = await new Promise((ready, abort) => {
     client.once('nextValidId', ready);
     client.eConnect(0, false).catch(abort);
-    client.on('error', (e_str_msg, code, msg) => !isFinite(e_str_msg) && abort(e_str_msg));
+    client.on('error', (reqId, time, code, msg, advancedOrderRejectJson) => abort(msg));
 });
 
 const id = nextValidId++;
@@ -60,7 +60,7 @@ await client.placeOrder(id, {
 });
 const order_status = await new Promise((ready, abort) => {
     let order_status;
-    client.on('error', (e_str_msg, code, msg) => !isFinite(e_str_msg) && abort(e_str_msg));
+    client.on('error', (reqId, time, code, msg, advancedOrderRejectJson) => abort(msg));
     client.on('orderStatus', (orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice) => {
         if (id == orderId) {
             order_status = status;
@@ -137,20 +137,19 @@ $ ib-tws-json --tws-api-port 7496
 connectAck
 managedAccounts	"U112233"
 nextValidId	1
-error	-1	2104	"Market data farm connection is OK:usfarm.nj"
-error	-1	2104	"Market data farm connection is OK:cashfarm"
-error	-1	2104	"Market data farm connection is OK:cafarm"
-error	-1	2104	"Market data farm connection is OK:usfarm"
-error	-1	2106	"HMDS data farm connection is OK:ushmds"
-error	-1	2158	"Sec-def data farm connection is OK:secdefnj"
+error	-1	"1768779264095" 2104	"Market data farm connection is OK:usfarm.nj"   ""
+error	-1	"1768779264095" 2104	"Market data farm connection is OK:cashfarm"    ""
+error	-1	"1768779264095" 2104	"Market data farm connection is OK:cafarm"  ""
+error	-1	"1768779264095" 2104	"Market data farm connection is OK:usfarm"  ""
+error	-1	"1768779264095" 2106	"HMDS data farm connection is OK:ushmds"    ""
+error	-1	"1768779264095" 2158	"Sec-def data farm connection is OK:secdefnj"   ""
 > placeOrder 1 {
 ...   "symbol":"SHOP","exchange": "TSE","currency":"CAD","secType":"STK"
 ... } {
 ...   "action":"BUY","totalQuantity":1,"orderType":"REL"
 ... }
-error	1	387	"Unsupported order type for this exchange and security type."
+error	1	"1768779264095" 387	"Unsupported order type for this exchange and security type."   ""
 > exit
-error	"Socket closed"
 ```
 
 API Guide
