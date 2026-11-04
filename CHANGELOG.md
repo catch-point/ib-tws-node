@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-11-04
+
+### Fixed
+- Response lines split across two chunks of socket or process output were
+  corrupted (the literal text `buffer` replaced the start of the line), so the
+  event was lost or emitted under the wrong name. Large responses were most
+  affected.
+- The `jts-install-dir` setting (`jtsInstallDir`, `--jts-install-dir`) is now
+  searched for the JRE bundled with TWS. It was still reading the `tws-path`
+  setting that was renamed in 0.1.1, so only the default install locations
+  were searched.
+
 ## [2.0.0] - 2026-11-04
 
 ### Changed
@@ -198,7 +210,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial Node.js client library for ib-tws-shell.
 
-[2.0.0]: https://github.com/catch-point/ib-tws-node/compare/2fcfe91...HEAD
+[2.0.1]: https://github.com/catch-point/ib-tws-node/compare/7d83a79...HEAD
+[2.0.0]: https://github.com/catch-point/ib-tws-node/compare/2fcfe91...7d83a79
 [1.1.1]: https://github.com/catch-point/ib-tws-node/compare/ec62e02...2fcfe91
 [1.1.0]: https://github.com/catch-point/ib-tws-node/compare/42361fb...ec62e02
 [1.0.0]: https://github.com/catch-point/ib-tws-node/compare/223693f...42361fb

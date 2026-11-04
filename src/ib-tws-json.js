@@ -216,7 +216,7 @@ async function getClassPath(jar, settings) {
  * List of common TWS install locations
  */
 function getJtsPathSearch(settings) {
-    const arg_value = settings['tws-path'];
+    const arg_value = settings['jts-install-dir'];
     if (arg_value) return [arg_value];
     else return [
         "C:\\Jts\\ibgateway",

@@ -59,7 +59,7 @@ async function createInstanceAsync(settings) {
     let buffer = '';
     shell.on('data', chunk => {
         try {
-            const lines = (buffer ? `buffer${chunk}` : chunk).split('\n');
+            const lines = (buffer + chunk).split('\n');
             lines.forEach((line, i) => {
                 if (i == lines.length -1) buffer = line;
                 else emit_line(self, line);
