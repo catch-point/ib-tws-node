@@ -16,13 +16,14 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-'use strict';
+import https from 'node:https';
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const pkg = require('./package.json');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 
 const MAX_REDIRECTS = 10;
 

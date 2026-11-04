@@ -5,6 +5,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-11-04
+
+### Added
+- `ARCHITECTURE.md`, describing the components, connection modes, wire
+  protocol, runtime schema and design constraints.
+- README sections on installation, command-line options, client members,
+  development and the license.
+
+### Changed
+- Converted the project from CommonJS to ES modules (`"type": "module"`).
+  Use `import Client from 'ib-tws-node'`. `require('ib-tws-node')` still
+  returns the client factory function on Node versions that can `require()`
+  ES modules.
+- Requires Node.js 20.19 or later, or 22.12 or later (previously 20.0).
+- `logger` is now a property of the exported factory function. Set
+  `Client.logger` instead of reassigning the module's `logger` export.
+  `require('ib-tws-node').logger = ...` continues to work.
+- Code that loads files inside the package directly, such as
+  `src/ib-tws-json.js`, receives an ES module; its factory is the
+  `default` export.
+- README updated for ES modules, with corrected and newly documented client
+  settings (`jsonApiHost`, `jsonApiInet`, `timeout`, `noLaunch`).
+- `.gitignore` trimmed to the files this project produces, including the TWS
+  settings written when the project folder is used as `jtsConfigDir`.
+
 ## [2.0.1] - 2026-11-04
 
 ### Fixed
@@ -210,7 +235,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial Node.js client library for ib-tws-shell.
 
-[2.0.1]: https://github.com/catch-point/ib-tws-node/compare/7d83a79...HEAD
+[2.1.0]: https://github.com/catch-point/ib-tws-node/compare/9ddd1ba...HEAD
+[2.0.1]: https://github.com/catch-point/ib-tws-node/compare/7d83a79...9ddd1ba
 [2.0.0]: https://github.com/catch-point/ib-tws-node/compare/2fcfe91...7d83a79
 [1.1.1]: https://github.com/catch-point/ib-tws-node/compare/ec62e02...2fcfe91
 [1.1.0]: https://github.com/catch-point/ib-tws-node/compare/42361fb...ec62e02

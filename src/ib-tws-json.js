@@ -16,26 +16,25 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { parseArgs } from 'node:util';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { readFile, access, readdir } from 'node:fs/promises';
 
-const util = require('util');
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
-const EventEmitter = require('events');
-const assert = require('assert').strict;
-const pkg = require('../package.json');
-const HOME = require('os').homedir();
-const realpath = util.promisify(fs.realpath);
-const readFile = util.promisify(fs.readFile);
-const access = util.promisify(fs.access);
-const readdir = util.promisify(fs.readdir);
+const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const HOME = os.homedir();
+const JAR = fileURLToPath(new URL('../lib/ib-tws-json.jar', import.meta.url));
+
+export default create_shell;
 
 /**
  * If launched directly, open a shell to the underlying ib-tws-json java process.
- * Otherwise, export a factory function to create a new process
+ * Otherwise, it is imported for its factory function to create a new process
  */
-if (require.main === module) {
+if (isMain()) {
     const cli_options = [
         ["-v, --version", "output the current version"],
         ["--launcher <exe>", "Launch script used to setup shell environment"],
@@ -74,7 +73,7 @@ if (require.main === module) {
     };
     let parsed;
     try {
-        parsed = util.parseArgs({options, allowPositionals: true, strict: true});
+        parsed = parseArgs({options, allowPositionals: true, strict: true});
     } catch (err) {
         console.error(`error: ${err.message}\n\n${usage()}`);
         process.exit(1);
@@ -94,8 +93,18 @@ if (require.main === module) {
             });
         });
     }
-} else {
-    module.exports = create_shell;
+}
+
+/**
+ * True when this file is being run as the ib-tws-json command, rather than imported.
+ * The npm bin link may be a symlink, so compare real paths.
+ */
+function isMain() {
+    try {
+        return !!process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+    } catch (err) {
+        return false;
+    }
 }
 
 /**
@@ -113,8 +122,7 @@ async function create_shell(settings) {
 async function spawn_shell(settings, scripts, stdio) {
     const java_exe = await getJavaExe(settings);
     const launcher = [].concat(settings['launcher'])[0] || java_exe;
-    const jar = path.resolve(module.filename, '../..', 'lib/ib-tws-json.jar');
-    const cp = await getClassPath(jar, settings);
+    const cp = await getClassPath(JAR, settings);
     const args = [];
     if (settings['launcher']) {
         args.push(...[].concat(settings['launcher']).slice(1));

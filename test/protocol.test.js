@@ -15,12 +15,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-'use strict';
-
-const net = require('net');
-const assert = require('assert').strict;
-const { test } = require('node:test');
-const Client = require('../src/ib-tws-node.js');
+import net from 'node:net';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import Client from '../src/ib-tws-node.js';
 
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 

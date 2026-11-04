@@ -16,16 +16,10 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-'use strict';
-
-const util = require('util');
-const fs = require('fs');
-const path = require('path');
-const assert = require('assert').strict;
-const { test, beforeEach, afterEach } = require('node:test');
-const Client = require('../src/ib-tws-node.js');
-const mkdtemp = util.promisify(fs.mkdtemp);
-const mkdir = util.promisify(fs.mkdir);
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { test, beforeEach, afterEach } from 'node:test';
+import Client from '../src/ib-tws-node.js';
 
 let client;
 

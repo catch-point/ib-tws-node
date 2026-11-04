@@ -15,24 +15,16 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-'use strict';
+import net from 'node:net';
+import EventEmitter from 'node:events';
+import assert from 'node:assert/strict';
+import ib_tws_json from './ib-tws-json.js';
 
-const util = require('util');
-const fs = require('fs');
-const path = require('path');
-const net = require('net');
-const { spawn } = require('child_process');
-const EventEmitter = require('events');
-const assert = require('assert').strict;
-const ib_tws_json = require('./ib-tws-json.js');
-const HOME = require('os').homedir();
-const realpath = util.promisify(fs.realpath);
-const readFile = util.promisify(fs.readFile);
-const access = util.promisify(fs.access);
-const readdir = util.promisify(fs.readdir);
-
-module.exports = createInstanceAsync;
-module.exports.logger = console;
+export default createInstanceAsync;
+// require('ib-tws-node') returns the factory function itself
+export { createInstanceAsync as 'module.exports' };
+// replace with any object that has an error method to redirect output from the Java process
+createInstanceAsync.logger = console;
 
 /**
  * Async factory function to create a new client object
@@ -65,7 +57,7 @@ async function createInstanceAsync(settings) {
                 else emit_line(self, line);
             });
         } catch(err) {
-            module.exports.logger.error(chunk);
+            createInstanceAsync.logger.error(chunk);
             self.emit('error', err);
         }
     });
@@ -237,7 +229,7 @@ async function standAloneJsonShell(tws_port, settings) {
     process.stdin.on('drain', () => process.emit('drain'));
     process.stderr.setEncoding('utf8');
     process.stderr.on('error', e => process.emit('error', e));
-    process.stderr.on('data', module.exports.logger.error);
+    process.stderr.on('data', createInstanceAsync.logger.error);
     process.stdout.setEncoding('utf8');
     process.stdout.on('error', e => process.emit('error', e));
     process.stdout.on('data', chunk => process.emit('data', chunk));
@@ -307,11 +299,11 @@ async function launchTws(json_port_offset, settings) {
     });
     process.stdin.destroy();
     process.stderr.setEncoding('utf8');
-    process.stderr.on('error', module.exports.logger.error);
-    process.stderr.on('data', module.exports.logger.error);
+    process.stderr.on('error', createInstanceAsync.logger.error);
+    process.stderr.on('data', createInstanceAsync.logger.error);
     process.stdout.setEncoding('utf8');
-    process.stdout.on('error', module.exports.logger.error);
-    process.stdout.on('data', module.exports.logger.error);
+    process.stdout.on('error', createInstanceAsync.logger.error);
+    process.stdout.on('data', createInstanceAsync.logger.error);
     await process.connected && new Promise(ready => process.once('exit', ready));
 }
 

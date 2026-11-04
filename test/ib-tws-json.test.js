@@ -15,14 +15,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-'use strict';
-
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const assert = require('assert').strict;
-const { test } = require('node:test');
-const ib_tws_json = require('../src/ib-tws-json.js');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import ib_tws_json from '../src/ib-tws-json.js';
 
 /**
  * Spawns ib-tws-json with Node as the launcher, which prints the java
