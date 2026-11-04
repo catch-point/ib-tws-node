@@ -2,7 +2,7 @@
 // vim: set filetype=javascript:
 // ib-tws-json.js
 /* 
- * Copyright (c) 2020-2023 James Leigh
+ * Copyright (c) 2020-2026 James Leigh
  * 
  * This program is free software: you can redistribute it and/or modify  
  * it under the terms of the GNU General Public License as published by  
@@ -111,9 +111,7 @@ function isMain() {
  * Factory function to create a new child process
  */
 async function create_shell(settings) {
-    const shell = await spawn_shell(settings, [], 'pipe');
-    shell.stderr.pipe(process.stderr);
-    return shell;
+    return spawn_shell(settings, [], 'pipe');
 }
 
 /**
@@ -177,7 +175,7 @@ async function findJavaRuntimeEnvironment(settings) {
     const jre = await search.reduce(async(p, jre) => {
         return await p || await access(jre).then(() => jre, err => {});
     }, null);
-    return jre;
+    return jre || process.env['JAVA_HOME'];
 }
 
 /**

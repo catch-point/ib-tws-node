@@ -5,6 +5,39 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-11-04
+
+### Added
+- Regression tests for deriving the JSON API port when `twsApiPort` is
+  provided as a string, for rejecting non-boolean values, for the
+  `JAVA_HOME` fallback, and for a launcher that cannot be started.
+
+### Fixed
+- A string `twsApiPort` was concatenated with the port offset, producing an
+  invalid JSON API port (for example `1007496` instead of `7596`). A string
+  `timeout` had the same kind of problem when waiting for a launched TWS.
+- Child process stderr was written to `process.stderr` and also passed to
+  `Client.logger`, producing duplicate output and bypassing a custom logger.
+- Boolean parameters accepted `0` and `""` as valid values.
+- `kill(signal)` ignored the signal, and `launchTws` did not wait for the
+  launcher process to exit.
+- JRE discovery did not fall back to `JAVA_HOME` when an install4j directory
+  was found but no usable JRE was located inside it.
+- If the launcher process could not be started while launching TWS (for
+  example, a missing `launcher` executable), the unhandled child process
+  `error` event crashed the Node process. The client factory now rejects with
+  a "could not launch IBKR TWS" error.
+
+### Changed
+- The factory exported by `src/ib-tws-json.js` no longer pipes the Java
+  process's stderr to `process.stderr`. Code that imports it directly must
+  read `stderr` itself (as the client does, through `Client.logger`), or the
+  Java process may block once the stderr pipe buffer fills.
+- README error examples ignore informational farm messages (2104, 2106 and
+  2158) instead of aborting on every `error` event. The install example now
+  pins v2.1.1, and the development section notes that `coverage` and
+  `inspect` require Node.js 22.8 or later.
+
 ## [2.1.0] - 2026-11-04
 
 ### Added
@@ -51,7 +84,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking:** Installation now fails if a binary dependency cannot be
   downloaded (non-200 HTTP status, too many redirects) or its SHA-256 checksum
   does not match. Previously an error page could be silently saved as the jar.
-- Updated ib-tws-json to 2.1.0.
+- Updated ib-tws-json from 1.1.1 to 2.1.0. TWS API commands, events and types
+  still come from the installed `TwsApi.jar` at runtime, so TWS API changes
+  depend on the TWS API version installed rather than on this release. See the
+  [ib-tws-json changelog](https://github.com/catch-point/ib-tws-json/blob/develop/CHANGELOG.md) for the changes in each TWS API version.
+- `help` for an overloaded name now always describes the same version (the one
+  with the most parameters, preferring enum parameters): `help "requestFA"`
+  shows `FADataType`, and `help "error"` shows
+  `error(int, long, int, String, String)`.
+- ib-tws-json 2.1.0 accepts numeric enum codes and every version of an
+  overloaded command, but this client still validates each call against the
+  version `help` describes and accepts enum names only. For example,
+  `requestFA(1)` is rejected; use `requestFA('GROUPS')`.
 - The `ib-tws-json` command line is parsed with Node's built-in `util.parseArgs`
   instead of `commander`. Options and their behaviour are unchanged; help text
   is no longer wrapped to the terminal width.
@@ -59,6 +103,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `npm run coverage` writes `coverage/lcov.info` instead of an HTML report.
 
 ### Fixed
+- `reqWshEventData` can be used. Its `WshEventData` parameter accepts `conId`
+  or `filter`, plus `fillWatchlist`, `fillPortfolio`, `fillCompetitors`,
+  `startDate`, `endDate` and `totalLimit`, and `help "WshEventData"` lists
+  them. Previously the call always failed.
 - The postinstall script skips the download when the existing jar already
   matches its checksum, and writes downloads to a temporary file so a failed
   download never leaves a partial jar behind.
@@ -66,6 +114,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the call; previously they could never fail.
 
 ### Removed
+- The TWS API's `*ProtoBuf` commands and events (such as `placeOrderProtoBuf`)
+  are no longer offered when the installed TWS API has them. They could not be
+  used from JSON.
 - All npm dependencies: `commander` (runtime) and `jest` (development).
   This removes all 17 vulnerabilities previously reported by `npm audit`.
 
@@ -81,12 +132,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-01-02
 
 ### Changed
-- Updated ib-tws-json to 1.1.1, which uses the newer TWS API `error` event
-  signature `(reqId, time, code, msg, advancedOrderRejectJson)`.
+- Updated ib-tws-json from 1.0.0 to 1.1.1, which is built for TWS API 10.37.
+  TWS API 10.37 changed several signatures from 10.19, including the `error`
+  event, now `(reqId, time, code, msg, advancedOrderRejectJson)`, as well as
+  `cancelOrder`, `reqGlobalCancel`, `exerciseOptions`, `orderStatus` (`permId`
+  is now a string) and `commissionReport` (renamed `commissionAndFeesReport`).
+  See [ib-tws-json 1.0.1](https://github.com/catch-point/ib-tws-json/blob/develop/CHANGELOG.md#101) for details. This client rejects calls that
+  use the old number of arguments or removed properties (such as
+  `Order.faProfile`) before they are sent.
 - Project moved from `jamesrdf` to the `catch-point` GitHub organization.
 
 ### Removed
-- `faMsgTypeName`, which is no longer part of the TWS API.
+- `faMsgTypeName`, ib-tws-json's own command and event (removed in
+  ib-tws-json 1.0.1).
 
 ## [1.0.0] - 2023-11-03
 
@@ -235,9 +293,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial Node.js client library for ib-tws-shell.
 
-[2.1.0]: https://github.com/catch-point/ib-tws-node/compare/9ddd1ba...HEAD
-[2.0.1]: https://github.com/catch-point/ib-tws-node/compare/7d83a79...9ddd1ba
-[2.0.0]: https://github.com/catch-point/ib-tws-node/compare/2fcfe91...7d83a79
+[2.1.1]: https://github.com/catch-point/ib-tws-node/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/catch-point/ib-tws-node/compare/v2.0.1...v2.1.0
+[2.0.1]: https://github.com/catch-point/ib-tws-node/compare/v2.0.0...v2.0.1
+[2.0.0]: https://github.com/catch-point/ib-tws-node/compare/2fcfe91...v2.0.0
 [1.1.1]: https://github.com/catch-point/ib-tws-node/compare/ec62e02...2fcfe91
 [1.1.0]: https://github.com/catch-point/ib-tws-node/compare/42361fb...ec62e02
 [1.0.0]: https://github.com/catch-point/ib-tws-node/compare/223693f...42361fb

@@ -52,3 +52,20 @@ test('jts-install-dir is searched for the TWS bundled JRE', async() => {
         fs.rmSync(jts, {recursive: true, force: true});
     }
 });
+
+test('JAVA_HOME is used when an install4j directory has no JRE', async() => {
+    const jts = fs.mkdtempSync(path.join(os.tmpdir(), 'ib-tws-json-test-'));
+    const previous = process.env['JAVA_HOME'];
+    try {
+        const javaHome = path.join(jts, 'java-home');
+        fs.mkdirSync(javaHome, {recursive: true});
+        fs.mkdirSync(path.join(jts, '.install4j'));
+        process.env['JAVA_HOME'] = javaHome;
+        const argv = await javaCommandLine({'jts-install-dir': jts});
+        assert.equal(argv[0], `${javaHome}/bin/java`);
+    } finally {
+        if (previous == null) delete process.env['JAVA_HOME'];
+        else process.env['JAVA_HOME'] = previous;
+        fs.rmSync(jts, {recursive: true, force: true});
+    }
+});

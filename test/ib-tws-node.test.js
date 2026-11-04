@@ -2,7 +2,7 @@
 // vim: set filetype=javascript:
 // ib-tws-node.test.js
 /* 
- * Copyright (c) 2020-2023 James Leigh
+ * Copyright (c) 2020-2026 James Leigh
  * 
  * This program is free software: you can redistribute it and/or modify  
  * it under the terms of the GNU General Public License as published by  
@@ -16,7 +16,6 @@
  * You should have received a copy of the GNU General Public License 
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { test, beforeEach, afterEach } from 'node:test';
 import Client from '../src/ib-tws-node.js';
@@ -32,22 +31,6 @@ beforeEach(async() => {
 afterEach(async() => {
     await client.exit();
 });
-
-function deleteFolderRecursive(path) {
-    if (fs.existsSync(path)) {
-        fs.readdirSync(path).forEach(function(file,index){
-            try {
-                var curPath = path + "/" + file;
-                if(fs.lstatSync(curPath).isDirectory()) {
-                    deleteFolderRecursive(curPath);
-                } else {
-                    fs.unlinkSync(curPath);
-                }
-            } catch(e) {} // likely already deleted
-        });
-        fs.rmdirSync(path);
-    }
-}
 
 test('help', async() => {
     await new Promise((resolve, reject) => {
@@ -111,6 +94,9 @@ test('param enum', async() => {
 
 test('param boolean', async() => {
     await assert.rejects(client.reqContractDetails(1, {includeExpired: 'yes'}));
+    await assert.rejects(client.reqContractDetails(1, {includeExpired: 0}));
+    await assert.rejects(client.reqContractDetails(1, {includeExpired: ''}));
+    await client.reqContractDetails(1, {includeExpired: false});
 });
 
 test('requestFA Groups by number', async() => {

@@ -1,7 +1,7 @@
 // vim: set filetype=javascript:
 // ib-tws-node.js
 /* 
- * Copyright (c) 2020-2023 James Leigh
+ * Copyright (c) 2020-2026 James Leigh
  * 
  * This program is free software: you can redistribute it and/or modify  
  * it under the terms of the GNU General Public License as published by  
@@ -45,7 +45,7 @@ async function createInstanceAsync(settings) {
         });
         self.emit('exit');
     }).on('error', onerror);
-    self.kill = signal => shell.destroy();
+    self.kill = signal => typeof shell.kill == 'function' ? shell.kill(signal) : shell.destroy();
     self.ref = () => shell.ref();
     self.unref = () => shell.unref();
     let buffer = '';
@@ -154,13 +154,15 @@ async function createInstanceAsync(settings) {
  */
 async function createShell(settings) {
     const json_port_offset = +settings['jsonApiPortOffset'] || 100;
-    const tws_ports = settings['twsApiHost'] ? [] : +settings['twsApiPort'] ? [+settings['twsApiPort']] :
+    const configured_tws_port = +settings['twsApiPort'] || 0;
+    const configured_json_port = +settings['jsonApiPort'] || 0;
+    const tws_ports = settings['twsApiHost'] ? [] : configured_tws_port ? [configured_tws_port] :
         [4002,7497,4001,7496];
-    const tws_port = +settings['twsApiPort'] || !settings['twsApiHost'] && await scanLocalPorts(tws_ports);
+    const tws_port = configured_tws_port || !settings['twsApiHost'] && await scanLocalPorts(tws_ports);
     const tws_host = settings['twsApiHost'] || null;
-    const json_ports = settings['jsonApiHost'] ? [] : +settings['jsonApiPort'] ? [+settings['jsonApiPort']] :
+    const json_ports = settings['jsonApiHost'] ? [] : configured_json_port ? [configured_json_port] :
         tws_ports.map(port=>json_port_offset+port);
-    const json_port = +settings['jsonApiPort'] || +settings['twsApiPort'] && json_port_offset+settings['twsApiPort'] ||
+    const json_port = configured_json_port || configured_tws_port && json_port_offset+configured_tws_port ||
         !settings['jsonApiHost'] && await scanLocalPorts(json_ports);
     const json_host = settings['jsonApiHost'] || tws_host;
     if (json_port) {
@@ -241,7 +243,7 @@ async function standAloneJsonShell(tws_port, settings) {
  */
 async function waitForLocalPorts(ports, settings) {
     let ms = 1000;
-    const end = Date.now() + (settings['timeout']||120000); // 2min timeout for two factor login
+    const end = Date.now() + (+settings['timeout']||120000); // 2min timeout for two factor login
     while (Date.now() < end) {
         await new Promise(cont => setTimeout(cont, ms+=ms));
         const port = await ports.reduce(async(memo, port) => {
@@ -304,7 +306,11 @@ async function launchTws(json_port_offset, settings) {
     process.stdout.setEncoding('utf8');
     process.stdout.on('error', createInstanceAsync.logger.error);
     process.stdout.on('data', createInstanceAsync.logger.error);
-    await process.connected && new Promise(ready => process.once('exit', ready));
+    await new Promise((ready, fail) => {
+        if (process.exitCode != null || process.signalCode != null) return ready();
+        process.once('exit', ready);
+        process.once('error', err => fail(Error(`ib-tws-node could not launch IBKR TWS: ${err.message}`, {cause: err})));
+    });
 }
 
 /**
@@ -407,7 +413,7 @@ function isIncorrectPrimitive(type, value) {
             return Number.isNaN(Number.parseFloat(value)) || Number.isNaN(+value);
         case 'boolean':
         case 'Boolean':
-            return value && typeof value != 'boolean';
+            return value != null && typeof value != 'boolean';
         case 'String':
             return value != null && typeof value == 'object';
         default:

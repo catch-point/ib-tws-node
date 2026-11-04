@@ -2,7 +2,7 @@
 // vim: set filetype=javascript:
 // ib-tws-node/postinstall.js
 /* 
- * Copyright (c) 2020 James Leigh
+ * Copyright (c) 2020-2026 James Leigh
  * 
  * This program is free software: you can redistribute it and/or modify  
  * it under the terms of the GNU General Public License as published by  

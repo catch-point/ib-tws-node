@@ -18,7 +18,7 @@ Requirements
 
 Users must agree to the terms of the Interactive Brokers license and download their software and Java Client API.
 
-* **Node.js 20.19** or later (or 22.12 or later).
+* **Node.js 20.19+ or 22.12+.**
 * **TWS or IB Gateway.** The TWS API is an interface to TWS or IB Gateway, and as such requires network connectivity to a running instance of one of these programs. They can be downloaded here: https://www.interactivebrokers.com/en/index.php?f=14099#tws-software
 * **The TWS API (Java).** Download the API Components from http://interactivebrokers.github.io and save them to `C:\TWS API` or `~/IBJts`, or point `twsApiJar` / `twsApiPath` at the `TwsApi.jar` file.
 * **Java.** By default the JRE bundled with the local TWS installation is used. Otherwise `JAVA_HOME` or `java` on the `PATH` is used.
@@ -33,7 +33,7 @@ This package is not published to the npm registry. Install it from GitHub, optio
 
 ```
 npm install github:catch-point/ib-tws-node
-npm install github:catch-point/ib-tws-node#v2.0.0
+npm install github:catch-point/ib-tws-node#v2.1.1
 ```
 
 During installation, `postinstall.js` downloads `lib/ib-tws-json.jar` from the [ib-tws-json releases](https://github.com/catch-point/ib-tws-json/releases) and verifies its SHA-256 checksum. The installation fails if the download fails or the checksum does not match.
@@ -57,9 +57,15 @@ const client = await Client({twsApiPort: 7496});
 // Always listen for 'error': Node throws if an EventEmitter emits 'error' without a listener
 client.on('error', console.log);
 
+// Farm connection messages, such as 2104 and 2106, are informational
+const informational = new Set([2104, 2106, 2158]);
+const onError = abort => (reqId, time, code, msg) => {
+    if (!informational.has(code)) abort(msg);
+};
+
 let nextValidId = await new Promise((ready, abort) => {
     client.once('nextValidId', ready);
-    client.on('error', (reqId, time, code, msg, advancedOrderRejectJson) => abort(msg));
+    client.on('error', onError(abort));
     client.eConnect(0, false).catch(abort);
 });
 
@@ -79,7 +85,7 @@ await client.placeOrder(id, {
 
 const order_status = await new Promise((ready, abort) => {
     let order_status;
-    client.on('error', (reqId, time, code, msg, advancedOrderRejectJson) => abort(msg));
+    client.on('error', onError(abort));
     client.on('orderStatus', (orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice) => {
         if (id == orderId) {
             order_status = status;
@@ -335,6 +341,8 @@ npm run coverage     # prints a coverage summary and writes coverage/lcov.info
 npm run inspect      # runs the tests in-process, paused for a debugger
 ```
 
+`npm run coverage` and `npm run inspect` use test-runner flags added in Node.js 22.5 and 22.8, so they require Node.js 22.8 or later. `npm test` works on all supported Node.js versions.
+
 `test/ib-tws-node.test.js` runs the Java Client in stand-alone mode, so it needs Java and `TwsApi.jar`, but not a running or logged-in TWS. The other tests use a fake JSON API server and a fake TWS install, and need neither.
 
 The project has no npm dependencies; please keep it that way where practical. See [ARCHITECTURE.md](ARCHITECTURE.md) before making larger changes.
@@ -346,6 +354,6 @@ To use a new ib-tws-json release, update the `url` and `sha256` of `lib/ib-tws-j
 License
 -------
 
-Copyright (c) 2020-2023 James Leigh.
+Copyright (c) 2020-2026 James Leigh.
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3 or later. See [LICENSE](LICENSE).
