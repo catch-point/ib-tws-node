@@ -1,13 +1,16 @@
 {
   "name": "ib-tws-node",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "Node client library for for Interactive Broker's Trading Workstation and Gateway",
   "main": "src/ib-tws-node.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "postinstall": "./postinstall.js",
-    "test": "jest",
-    "inspect": "node --inspect-brk node_modules/.bin/jest --runInBand",
-    "coverage": "jest --coverage --config='{\"coverageReporters\":[\"html\"]}'"
+    "test": "node --test --test-timeout=1200000 test/*.test.js",
+    "inspect": "node --inspect-brk --test --experimental-test-isolation=none test/*.test.js",
+    "coverage": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info test/*.test.js"
   },
   "repository": {
     "type": "git",
@@ -35,12 +38,9 @@
     "ib-tws-json": "./src/ib-tws-json.js"
   },
   "binary-dependencies": {
-    "lib/ib-tws-json.jar": "https://github.com/catch-point/ib-tws-json/releases/download/v1.1.1/ib-tws-json-1.1.1.jar"
-  },
-  "devDependencies": {
-    "jest": "^28.1.3"
-  },
-  "dependencies": {
-    "commander": "^6.2.1"
+    "lib/ib-tws-json.jar": {
+      "url": "https://github.com/catch-point/ib-tws-json/releases/download/v2.1.0/ib-tws-json-2.1.0.jar",
+      "sha256": "60666b9666fece42acef6c29d4332feced64ff6dcfb527b3d14691437c9f68e5"
+    }
   }
 }

@@ -21,22 +21,86 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const pkg = require('./package.json');
 
-const downloads = pkg['binary-dependencies'];
-for (var filename in downloads) {
-    fs.mkdir(path.resolve(path.dirname(filename)), {recursive: true}, () => {
-        download(downloads[filename], filename);
+const MAX_REDIRECTS = 10;
+
+main().catch(err => {
+    console.error(err.message);
+    process.exitCode = 1;
+});
+
+/**
+ * Downloads each binary-dependency, verifying its sha256 checksum.
+ * Each entry is "file": {"url": "...", "sha256": "..."}
+ */
+async function main() {
+    const downloads = pkg['binary-dependencies'] || {};
+    for (const [filename, {url, sha256}] of Object.entries(downloads)) {
+        if (!url || !/^[0-9a-f]{64}$/i.test(sha256 || '')) {
+            throw Error(`binary-dependencies["${filename}"] needs a url and a sha256 checksum`);
+        }
+        const file = path.resolve(__dirname, filename);
+        if (await hashFile(file).catch(() => null) === sha256.toLowerCase()) {
+            console.log(file, 'is up to date');
+            continue;
+        }
+        console.log(url, '->', file);
+        await fs.promises.mkdir(path.dirname(file), {recursive: true});
+        const tmp = `${file}.${process.pid}.download`;
+        try {
+            const actual = await download(url, tmp);
+            if (actual !== sha256.toLowerCase()) {
+                throw Error(`Checksum mismatch for ${url}: expected sha256 ${sha256}, got ${actual}`);
+            }
+            await fs.promises.rename(tmp, file);
+        } finally {
+            await fs.promises.rm(tmp, {force: true});
+        }
+    }
+}
+
+/**
+ * Saves the url to file, following redirects, and resolves to its sha256 hex digest
+ */
+function download(url, file, redirects = 0) {
+    return new Promise((resolve, reject) => {
+        https.get(url, response => {
+            const {statusCode, headers} = response;
+            if (300 <= statusCode && statusCode < 400 && headers.location) {
+                response.resume();
+                if (redirects >= MAX_REDIRECTS) {
+                    reject(Error(`Too many redirects downloading ${url}`));
+                } else {
+                    const next = new URL(headers.location, url).href;
+                    resolve(download(next, file, redirects + 1));
+                }
+            } else if (statusCode !== 200) {
+                response.resume();
+                reject(Error(`Download failed with HTTP ${statusCode} ${response.statusMessage}: ${url}`));
+            } else {
+                const hash = crypto.createHash('sha256');
+                const out = fs.createWriteStream(file);
+                response.on('data', chunk => hash.update(chunk));
+                response.on('error', reject);
+                out.on('error', reject);
+                out.on('finish', () => resolve(hash.digest('hex')));
+                response.pipe(out);
+            }
+        }).on('error', reject);
     });
 }
 
-function download(url, file) {
-    console.log(url,'->', path.resolve(filename));
-    return https.get(url, response => {
-        if (300 < response.statusCode && response.statusCode < 400 && response.headers.location) {
-            download(response.headers.location, file);
-        } else {
-            response.pipe(fs.createWriteStream(file));
-        }
+/**
+ * Resolves to the sha256 hex digest of an existing file
+ */
+function hashFile(file) {
+    return new Promise((resolve, reject) => {
+        const hash = crypto.createHash('sha256');
+        fs.createReadStream(file)
+            .on('error', reject)
+            .on('data', chunk => hash.update(chunk))
+            .on('end', () => resolve(hash.digest('hex')));
     });
 }

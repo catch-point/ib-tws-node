@@ -24,7 +24,6 @@ const path = require('path');
 const { spawn } = require('child_process');
 const EventEmitter = require('events');
 const assert = require('assert').strict;
-const {Command} = require('commander');
 const pkg = require('../package.json');
 const HOME = require('os').homedir();
 const realpath = util.promisify(fs.realpath);
@@ -37,45 +36,56 @@ const readdir = util.promisify(fs.readdir);
  * Otherwise, export a factory function to create a new process
  */
 if (require.main === module) {
-    const program = new Command();
-    program.name('ib-tws-json').usage('[options] [script files...]')
-        .storeOptionsAsProperties(false)
-        .version(pkg.version, '-v, --version', 'output the current version')
-        .option("--launcher <exe>", "Launch script used to setup shell environment")
-		.option("--install", "Installs the TWS JSON extension from TWS")
-		.option("--uninstall", "Uninstalls the TWS JSON extension from TWS")
-		.option("--launch", "Installs the TWS JSON extension and starts TWS before exiting")
-		.option("-i, --interactive", "Enter interactive client mode")
-		.option("--no-prompt", "Don't prompt for input when in interactive mode")
-		.option("--tws-api-path <path>", "The TwsApi directory to be searched for TwsApi.jar")
-		.option("-j, --tws-api-jar <file>", "The TwsApi.jar filename")
-		.option("--tws-api-host <inet>", "Hostname or IP running TWS")
-		.option("-p, --tws-api-port <integer>", "Port TWS API is running on")
-		.option("--json-api-port <integer>", "Server port for TWS JSON API to listen on")
-		.option("--json-api-port-offset <integer>", "Server JSON port offset from tws-api-port")
-		.option("--json-api-inet <inet>", "Server local network interface to listen on for TWS JSON API")
-		.option("--jts-exe-name <filename>", "The primary launch filename installed by TWS software")
-		.option("--jts-install-dir <path>",
-				"Location of Jts/ibgateway/Trader Workstation/IB Gateway folder to use")
-		.option("--jts-config-dir <path>", "Where TWS will read/store settings")
-        .option("--java-home <path>", "The location of the jre to launch")
-        .option("-h, --help", "This message");
-    program.parse(process.argv);
-    const settings = program.options.reduce((settings, option) => {
-        const value = program.opts()[option.attributeName()];
-        if (value != null) {
-            if (option.long.startsWith('--no-')) {
-                settings[option.long.substring(2)] = !value;
-            } else if (option.long.startsWith('--')) {
-                settings[option.long.substring(2)] = value;
-            }
-        }
-        return settings;
-    }, {});
-    if (settings['help']) {
-        program.outputHelp();
+    const cli_options = [
+        ["-v, --version", "output the current version"],
+        ["--launcher <exe>", "Launch script used to setup shell environment"],
+        ["--install", "Installs the TWS JSON extension from TWS"],
+        ["--uninstall", "Uninstalls the TWS JSON extension from TWS"],
+        ["--launch", "Installs the TWS JSON extension and starts TWS before exiting"],
+        ["-i, --interactive", "Enter interactive client mode"],
+        ["--no-prompt", "Don't prompt for input when in interactive mode"],
+        ["--tws-api-path <path>", "The TwsApi directory to be searched for TwsApi.jar"],
+        ["-j, --tws-api-jar <file>", "The TwsApi.jar filename"],
+        ["--tws-api-host <inet>", "Hostname or IP running TWS"],
+        ["-p, --tws-api-port <integer>", "Port TWS API is running on"],
+        ["--json-api-port <integer>", "Server port for TWS JSON API to listen on"],
+        ["--json-api-port-offset <integer>", "Server JSON port offset from tws-api-port"],
+        ["--json-api-inet <inet>", "Server local network interface to listen on for TWS JSON API"],
+        ["--jts-exe-name <filename>", "The primary launch filename installed by TWS software"],
+        ["--jts-install-dir <path>", "Location of Jts/ibgateway/Trader Workstation/IB Gateway folder to use"],
+        ["--jts-config-dir <path>", "Where TWS will read/store settings"],
+        ["--java-home <path>", "The location of the jre to launch"],
+        ["-h, --help", "This message"]
+    ];
+    // "-p, --tws-api-port <integer>" -> ['tws-api-port', {type: 'string', short: 'p'}]
+    const options = Object.fromEntries(cli_options.map(([flags]) => {
+        const [, short, long, arg] = flags.match(/^(?:-(\w), )?--([\w-]+)( <\w+>)?$/);
+        return [long, {type: arg ? 'string' : 'boolean', ...(short && {short})}];
+    }));
+    const usage = () => {
+        const width = Math.max(...cli_options.map(([flags]) => flags.length)) + 2;
+        return [
+            "Usage: ib-tws-json [options] [script files...]",
+            "",
+            "Options:",
+            ...cli_options.map(([flags, desc]) => `  ${flags.padEnd(width)}${desc}`),
+            ""
+        ].join('\n');
+    };
+    let parsed;
+    try {
+        parsed = util.parseArgs({options, allowPositionals: true, strict: true});
+    } catch (err) {
+        console.error(`error: ${err.message}\n\n${usage()}`);
+        process.exit(1);
+    }
+    const settings = parsed.values;
+    if (settings['version']) {
+        console.log(pkg.version);
+    } else if (settings['help']) {
+        process.stdout.write(usage());
     } else {
-        spawn_shell(settings, program.args, 'inherit').then(java => {
+        spawn_shell(settings, parsed.positionals, 'inherit').then(java => {
             java.on('error', err => {
                 console.error(err);
             }).on('exit', code => {

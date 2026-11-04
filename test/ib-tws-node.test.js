@@ -21,13 +21,15 @@
 const util = require('util');
 const fs = require('fs');
 const path = require('path');
+const assert = require('assert').strict;
+const { test, beforeEach, afterEach } = require('node:test');
 const Client = require('../src/ib-tws-node.js');
 const mkdtemp = util.promisify(fs.mkdtemp);
 const mkdir = util.promisify(fs.mkdir);
 
 let client;
 
-jest.setTimeout(1200000); // 2 minutes timeout for human input
+// npm test sets --test-timeout=1200000 (20 minutes) for human input
 
 beforeEach(async() => {
     client = await Client({twsApiPort: 7496, twsApiHost: 'localhost'});
@@ -53,47 +55,51 @@ function deleteFolderRecursive(path) {
     }
 }
 
-test('help', done => {
-    client.on('help', (method, param, type) => {
-        expect(method).toBeTruthy();
-        expect(param).toBeTruthy();
-        expect(type).toBeTruthy();
-    }).on('helpEnd', () => {
-        done();
+test('help', async() => {
+    await new Promise((resolve, reject) => {
+        client.on('help', (method, param, type) => {
+            try {
+                assert.ok(method);
+                assert.ok(param);
+                assert.ok(type);
+            } catch (err) {
+                reject(err);
+            }
+        }).on('helpEnd', resolve);
+        client.help("placeOrder").catch(reject);
     });
-    client.help("placeOrder");
 });
 
-test('error', done => {
-    client.on('error', (reqId, time, code, msg, advancedOrderRejectJson) => {
-        expect(msg).toContain('Not connected');
-        done();
+test('error', async() => {
+    const msg = await new Promise((resolve, reject) => {
+        client.on('error', (reqId, time, code, msg, advancedOrderRejectJson) => resolve(msg));
+        client.reqIds(-1).catch(reject);
     });
-    client.reqIds(-1);
+    assert.match(msg, /Not connected/);
 });
 
 test('param length', async() => {
-    await expect(client.help()).rejects.toThrow();
+    await assert.rejects(client.help());
 });
 
 test('param type', async() => {
-    await expect(client.sleep("two")).rejects.toThrow();
+    await assert.rejects(client.sleep("two"));
 });
 
 test('param int', async() => {
-    await expect(client.calculateImpliedVolatility(34.6, {}, "34.0", 16, [])).rejects.toThrow();
+    await assert.rejects(client.calculateImpliedVolatility(34.6, {}, "34.0", 16, []));
 });
 
 test('param foo', async() => {
-    await expect(client.calculateImpliedVolatility(34, {conid: 4, foo: 'bar'}, "34.0", 16, [])).rejects.toThrow();
+    await assert.rejects(client.calculateImpliedVolatility(34, {conid: 4, foo: 'bar'}, "34.0", 16, []));
 });
 
 test('param double', async() => {
-    await expect(client.calculateImpliedVolatility(34, {}, "34b", 16, [])).rejects.toThrow();
+    await assert.rejects(client.calculateImpliedVolatility(34, {}, "34b", 16, []));
 });
 
 test('param array', async() => {
-    await expect(client.calculateImpliedVolatility(34, {}, "34.0", 16, {tag:'name',value:'value'})).rejects.toThrow();
+    await assert.rejects(client.calculateImpliedVolatility(34, {}, "34.0", 16, {tag:'name',value:'value'}));
 });
 
 test('param calculateImpliedVolatility', async() => {
@@ -102,31 +108,31 @@ test('param calculateImpliedVolatility', async() => {
 });
 
 test('param nested object', async() => {
-    await expect(client.reqContractDetails(1, {deltaNeutralContract: 'bogus'})).rejects.toThrow();
+    await assert.rejects(client.reqContractDetails(1, {deltaNeutralContract: 'bogus'}));
 });
 
 test('param enum', async() => {
-    await expect(client.reqContractDetails(1, {secIdType: 'bogus'})).rejects.toThrow();
+    await assert.rejects(client.reqContractDetails(1, {secIdType: 'bogus'}));
 });
 
 test('param boolean', async() => {
-    await expect(client.reqContractDetails(1, {includeExpired: 'yes'})).rejects.toThrow();
+    await assert.rejects(client.reqContractDetails(1, {includeExpired: 'yes'}));
+});
+
+test('requestFA Groups by number', async() => {
+    await assert.rejects(client.requestFA(1));
+});
+
+test('requestFA Aliases by number', async() => {
+    await assert.rejects(client.requestFA(3));
 });
 
 test('requestFA Groups', async() => {
-    await expect(client.requestFA(1)).rejects.toThrow();
+    await client.requestFA('GROUPS');
 });
 
 test('requestFA Aliases', async() => {
-    await expect(client.requestFA(3)).rejects.toThrow();
-});
-
-test('requestFA Groups', async() => {
-    await expect(client.requestFA('GROUPS'));
-});
-
-test('requestFA Aliases', async() => {
-    await expect(client.requestFA('ALIASES'));
+    await client.requestFA('ALIASES');
 });
 
 test.skip('placeOrder', async() => {
