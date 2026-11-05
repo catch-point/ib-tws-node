@@ -78,8 +78,8 @@ Notes:
 [launcher ...] <java> -cp lib/ib-tws-json.jar<sep>TwsApi.jar com.meerkattrading.tws.Shell [--flags ...] [scripts ...]
 ```
 
-* **Java:** `java-home` setting → the install4j JRE of the local TWS install (`.install4j/pref_jre.cfg`, `inst_jre.cfg`, or the macOS `jre.bundle`) → `JAVA_HOME` → `java` on the `PATH`.
-* **TwsApi.jar:** `tws-api-jar` → a recursive search of `tws-api-path` → a recursive search of `C:\TWS API`, `~/IBJts`, `~/Jts`, `~/Downloads`, `~/Download`, `~/lib`, `~/libs`. Directories are searched highest version number first (`listNumerically`), so the newest API wins.
+* **Java:** `java-home` setting → the install4j JRE of the local TWS or IB Gateway install, found under `jts-install-dir` or else `C:\Jts`, `~/Jts`, `~/ibgateway`, `~/tws` or `~/Applications` (`.install4j/pref_jre.cfg`, `inst_jre.cfg`, or the macOS `jre.bundle`) → `JAVA_HOME` → `java` on the `PATH`.
+* **TwsApi.jar:** `tws-api-jar` → a recursive search of `tws-api-path` → a recursive search of the `TWS API` and `TWS API <version>` folders in `C:\`, `~` and `~/Applications`, then `~/tws-api`, `~/IBJts`, `~/Jts`, `~/Downloads`, `~/Download`, `~/lib`, `~/libs`. Directories are searched highest version number first (`listNumerically`), so the newest API wins.
 * **launcher:** an optional command (or array) that is run instead of Java, with the Java command line appended. Used to set up the environment, for example under `xvfb-run` on a headless server.
 * **env:** merged over `process.env` for the child process.
 
@@ -172,7 +172,7 @@ This split is deliberate: **client mistakes reject the promise** of the call tha
 
 ```json
 "binary-dependencies": {
-  "lib/ib-tws-json.jar": { "url": "https://…/ib-tws-json-2.1.0.jar", "sha256": "…" }
+  "lib/ib-tws-json.jar": { "url": "https://…/ib-tws-json-2.1.1.jar", "sha256": "…" }
 }
 ```
 

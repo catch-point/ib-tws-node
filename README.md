@@ -20,7 +20,7 @@ Users must agree to the terms of the Interactive Brokers license and download th
 
 * **Node.js 20.19+ or 22.12+.**
 * **TWS or IB Gateway.** The TWS API is an interface to TWS or IB Gateway, and as such requires network connectivity to a running instance of one of these programs. They can be downloaded here: https://www.interactivebrokers.com/en/index.php?f=14099#tws-software
-* **The TWS API (Java).** Download the API Components from http://interactivebrokers.github.io and save them to `C:\TWS API` or `~/IBJts`, or point `twsApiJar` / `twsApiPath` at the `TwsApi.jar` file.
+* **The TWS API (Java).** Download the API Components from http://interactivebrokers.github.io and save them to the installer's default folder (`C:\TWS API <version>`, `~/Applications/TWS API <version>`, `~/TWS API <version>`, or `~/tws-api` for an unattended install) or `~/IBJts`, or point `twsApiJar` / `twsApiPath` at the `TwsApi.jar` file.
 * **Java.** By default the JRE bundled with the local TWS installation is used. Otherwise `JAVA_HOME` or `java` on the `PATH` is used.
 * A working knowledge of the TWS API.
 
@@ -33,7 +33,7 @@ This package is not published to the npm registry. Install it from GitHub, optio
 
 ```
 npm install github:catch-point/ib-tws-node
-npm install github:catch-point/ib-tws-node#v2.1.1
+npm install github:catch-point/ib-tws-node#v2.1.2
 ```
 
 During installation, `postinstall.js` downloads `lib/ib-tws-json.jar` from the [ib-tws-json releases](https://github.com/catch-point/ib-tws-json/releases) and verifies its SHA-256 checksum. The installation fails if the download fails or the checksum does not match.
@@ -143,8 +143,8 @@ It takes the following options.
 |jsonApiHost|If different from `twsApiHost`, the remote host running the JSON API.|
 |jsonApiInet|The local network interface the JSON API listens on when ib-tws-node launches TWS.|
 |twsApiJar|Points to the TwsApi.jar file that should be used when connecting to TWS. If none is provided it is searched for using `twsApiPath`.|
-|twsApiPath|Where to look for the TwsApi.jar file (if `twsApiJar` is not provided). If not provided, it looks in `C:\TWS API`, `~/IBJts`, `~/Jts`, `~/Downloads`, `~/Download`, `~/lib` and `~/libs`.|
-|javaHome|The JRE that is used to launch TWS. If none is provided, an install4j JRE is searched for in the TWS installation. Note that TWS cannot be run with just any JRE and depends on features provided with the JRE that came with the install.|
+|twsApiPath|Where to look for the TwsApi.jar file (if `twsApiJar` is not provided). If not provided, it looks in `C:\TWS API*`, `~/TWS API*`, `~/Applications/TWS API*`, `~/tws-api`, `~/IBJts`, `~/Jts`, `~/Downloads`, `~/Download`, `~/lib` and `~/libs`.|
+|javaHome|The JRE that is used to launch TWS. If none is provided, an install4j JRE is searched for in the TWS or IB Gateway installation (`C:\Jts`, `~/Jts`, `~/Applications`, or `~/tws` and `~/ibgateway` for an unattended install). Note that TWS cannot be run with just any JRE and depends on features provided with the JRE that came with the install.|
 |jtsInstallDir|The install location of TWS Desktop or Gateway. If using an offline version (or Gateway) this can point to the folder with the version number. When not provided, the system looks in the default location for Gateway and (if not found) TWS Desktop.|
 |jtsExeName|When launching TWS, use this script name in `jtsInstallDir` to launch it.|
 |jtsConfigDir|Where TWS reads and stores its settings. Every running instance must have a unique config directory, which defaults to `~/Jts`.|

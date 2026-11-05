@@ -229,6 +229,8 @@ function getJtsPathSearch(settings) {
         "C:\\Jts",
         HOME + "/Jts/ibgateway",
         HOME + "/Jts",
+        HOME + "/ibgateway",
+        HOME + "/tws",
         HOME + "/Applications"
     ];
 }
@@ -259,7 +261,10 @@ async function getTwsApiJar(settings) {
         return jar;
     }
     const tws_api_path_search = [
-        "C:\\TWS API",
+        ...await listTwsApiFolders("C:\\"),
+        ...await listTwsApiFolders(HOME),
+        ...await listTwsApiFolders(path.resolve(HOME, "Applications")),
+        path.resolve(HOME, "tws-api"),
         path.resolve(HOME, "IBJts"),
         path.resolve(HOME, "Jts"),
         path.resolve(HOME, "Downloads"),
@@ -272,6 +277,14 @@ async function getTwsApiJar(settings) {
         else return searchFor(dir, "TwsApi.jar");
     }, null);
     return jar;
+}
+
+/**
+ * Lists the "TWS API" and "TWS API <version>" folders in dir, highest version first
+ */
+async function listTwsApiFolders(dir) {
+    const list = await listNumerically(dir);
+    return list.filter(name => /^TWS API( |$)/i.test(name)).map(name => path.resolve(dir, name));
 }
 
 /**

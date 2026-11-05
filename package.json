@@ -1,6 +1,6 @@
 {
   "name": "ib-tws-node",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Node client library for for Interactive Broker's Trading Workstation and Gateway",
   "type": "module",
   "main": "src/ib-tws-node.js",
@@ -40,8 +40,8 @@
   },
   "binary-dependencies": {
     "lib/ib-tws-json.jar": {
-      "url": "https://github.com/catch-point/ib-tws-json/releases/download/v2.1.0/ib-tws-json-2.1.0.jar",
-      "sha256": "60666b9666fece42acef6c29d4332feced64ff6dcfb527b3d14691437c9f68e5"
+      "url": "https://github.com/catch-point/ib-tws-json/releases/download/v2.1.1/ib-tws-json-2.1.1.jar",
+      "sha256": "121d8618ae31284607fab7a6dcee433017ab6944fda6d94e4646973776418399"
     }
   }
 }
