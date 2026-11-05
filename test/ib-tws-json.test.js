@@ -39,11 +39,19 @@ async function javaCommandLine(settings) {
     return JSON.parse(stdout);
 }
 
+/**
+ * Creates a JRE folder at jre holding an (empty) java executable.
+ */
+function makeJre(jre) {
+    fs.mkdirSync(path.join(jre, 'bin'), {recursive: true});
+    fs.writeFileSync(path.join(jre, 'bin', process.platform == 'win32' ? 'java.exe' : 'java'), '');
+    return jre;
+}
+
 test('jts-install-dir is searched for the TWS bundled JRE', async() => {
     const jts = fs.mkdtempSync(path.join(os.tmpdir(), 'ib-tws-json-test-'));
     try {
-        const jre = path.join(jts, 'jre');
-        fs.mkdirSync(path.join(jre, 'bin'), {recursive: true});
+        const jre = makeJre(path.join(jts, 'jre'));
         fs.mkdirSync(path.join(jts, '.install4j'));
         fs.writeFileSync(path.join(jts, '.install4j', 'pref_jre.cfg'), jre);
         const argv = await javaCommandLine({'jts-install-dir': jts});
@@ -107,12 +115,23 @@ function withTempHome(fn) {
     };
 }
 
-function installJre(dir) {
-    const jre = path.join(dir, 'jre');
-    fs.mkdirSync(path.join(jre, 'bin'), {recursive: true});
+/**
+ * Lays out dir like an unattended (-q) install4j install: the JRE is bundled in
+ * dir/jre, and inst_jre.cfg names the installer's own temporary JRE, which no
+ * longer exists. When pref is given, pref_jre.cfg names it; a JRE is created
+ * there unless emptyPref is set, which leaves an empty folder with no java
+ * executable. Returns the JRE that should be used.
+ */
+function installJts(dir, {pref, emptyPref} = {}) {
+    const bundled = makeJre(path.join(dir, 'jre'));
     fs.mkdirSync(path.join(dir, '.install4j'), {recursive: true});
-    fs.writeFileSync(path.join(dir, '.install4j', 'pref_jre.cfg'), jre);
-    return jre;
+    fs.writeFileSync(path.join(dir, '.install4j', 'inst_jre.cfg'),
+        path.join(os.tmpdir(), 'tws.sh.9.dir', 'jre') + '\n');
+    if (!pref) return bundled;
+    if (emptyPref) fs.mkdirSync(pref, {recursive: true});
+    else makeJre(pref);
+    fs.writeFileSync(path.join(dir, '.install4j', 'pref_jre.cfg'), pref);
+    return emptyPref ? bundled : pref;
 }
 
 function classPath(argv) {
@@ -120,13 +139,60 @@ function classPath(argv) {
 }
 
 for (const folder of ['tws', 'ibgateway']) {
-    test(`JRE is found in an unattended install in ~/${folder}`, withTempHome(async home => {
+    test(`JRE named in pref_jre.cfg is used in ~/${folder}`, withTempHome(async home => {
         fs.mkdirSync(path.join(home, 'Jts'));
-        const jre = installJre(path.join(home, folder));
+        const dir = path.join(home, folder);
+        const jre = installJts(dir, {pref: path.join(dir, 'chosen-jre')});
         const argv = await javaCommandLineWithHome(home, {'tws-api-jar': 'TwsApi.jar'});
         assert.equal(argv[0], `${jre}/bin/java`);
     }));
 }
+
+for (const folder of ['tws', 'ibgateway']) {
+    test(`bundled JRE is used when inst_jre.cfg names a deleted JRE in ~/${folder}`, withTempHome(async home => {
+        fs.mkdirSync(path.join(home, 'Jts'));
+        const jre = installJts(path.join(home, folder));
+        const argv = await javaCommandLineWithHome(home, {'tws-api-jar': 'TwsApi.jar'});
+        assert.equal(argv[0], `${jre}/bin/java`);
+    }));
+}
+
+test('bundled JRE is used when inst_jre.cfg names a deleted JRE in jts-install-dir', async() => {
+    const jts = fs.mkdtempSync(path.join(os.tmpdir(), 'ib-tws-json-test-'));
+    const previous = process.env['JAVA_HOME'];
+    try {
+        const jre = installJts(jts);
+        process.env['JAVA_HOME'] = path.join(jts, 'java-home');
+        const argv = await javaCommandLine({'jts-install-dir': jts});
+        assert.equal(argv[0], `${jre}/bin/java`);
+    } finally {
+        if (previous == null) delete process.env['JAVA_HOME'];
+        else process.env['JAVA_HOME'] = previous;
+        fs.rmSync(jts, {recursive: true, force: true});
+    }
+});
+
+test('a JRE chosen in pref_jre.cfg is preferred over the bundled JRE', async() => {
+    const jts = fs.mkdtempSync(path.join(os.tmpdir(), 'ib-tws-json-test-'));
+    try {
+        const chosen = installJts(jts, {pref: path.join(jts, 'chosen-jre')});
+        const argv = await javaCommandLine({'jts-install-dir': jts});
+        assert.equal(argv[0], `${chosen}/bin/java`);
+    } finally {
+        fs.rmSync(jts, {recursive: true, force: true});
+    }
+});
+
+test('a JRE folder without a java executable is skipped', async() => {
+    const jts = fs.mkdtempSync(path.join(os.tmpdir(), 'ib-tws-json-test-'));
+    try {
+        const jre = installJts(jts, {pref: path.join(jts, 'chosen-jre'), emptyPref: true});
+        const argv = await javaCommandLine({'jts-install-dir': jts});
+        assert.equal(argv[0], `${jre}/bin/java`);
+    } finally {
+        fs.rmSync(jts, {recursive: true, force: true});
+    }
+});
 
 test('TwsApi.jar is found in an unattended install in ~/tws-api', withTempHome(async home => {
     const jar = path.join(home, 'tws-api', 'source', 'JavaClient', 'TwsApi.jar');

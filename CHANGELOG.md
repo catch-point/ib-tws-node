@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.3] - 2026-11-04
+
+### Fixed
+- The JRE bundled with TWS or IB Gateway (the `jre` folder beside
+  `.install4j`) is used when the JREs recorded in `pref_jre.cfg` and
+  `inst_jre.cfg` do not exist. An unattended (`-q`) install records the
+  installer's own temporary JRE in `inst_jre.cfg`, which is deleted when the
+  install finishes, so launching TWS from such an install fell back to
+  `JAVA_HOME` or `java` on the `PATH`, and failed when there was none.
+- A JRE folder from the TWS or IB Gateway install is used only when it holds
+  `bin/java` (`bin\java.exe` on Windows), so a leftover folder without a java
+  executable no longer hides the bundled JRE.
+
 ## [2.1.2] - 2026-11-04
 
 ### Changed
@@ -311,6 +324,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial Node.js client library for ib-tws-shell.
 
+[2.1.3]: https://github.com/catch-point/ib-tws-node/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/catch-point/ib-tws-node/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/catch-point/ib-tws-node/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/catch-point/ib-tws-node/compare/v2.0.1...v2.1.0

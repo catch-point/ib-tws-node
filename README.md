@@ -33,7 +33,7 @@ This package is not published to the npm registry. Install it from GitHub, optio
 
 ```
 npm install github:catch-point/ib-tws-node
-npm install github:catch-point/ib-tws-node#v2.1.2
+npm install github:catch-point/ib-tws-node#v2.1.3
 ```
 
 During installation, `postinstall.js` downloads `lib/ib-tws-json.jar` from the [ib-tws-json releases](https://github.com/catch-point/ib-tws-json/releases) and verifies its SHA-256 checksum. The installation fails if the download fails or the checksum does not match.

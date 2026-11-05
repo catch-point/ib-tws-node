@@ -167,15 +167,26 @@ async function findJavaRuntimeEnvironment(settings) {
     if (arg_value) return arg_value;
     const install4j = await getInstall4j(settings);
     if (!install4j) return process.env['JAVA_HOME'];
+    // The JREs recorded by install4j come first. An unattended install records
+    // the installer's own temporary JRE in inst_jre.cfg, which is deleted once
+    // the install finishes, so the JRE bundled beside .install4j comes last.
     const search = [
         path.resolve(install4j, 'jre.bundle', 'Contents', 'Home', 'jre'),
         await readFile(path.resolve(install4j, 'pref_jre.cfg'), 'utf8').catch(err => {}),
-        await readFile(path.resolve(install4j, 'inst_jre.cfg'), 'utf8').catch(err => {})
+        await readFile(path.resolve(install4j, 'inst_jre.cfg'), 'utf8').catch(err => {}),
+        path.resolve(install4j, '..', 'jre')
     ].map(jre => jre && jre.trim()).filter(jre => jre);
     const jre = await search.reduce(async(p, jre) => {
-        return await p || await access(jre).then(() => jre, err => {});
+        return await p || await access(javaExecutable(jre)).then(() => jre, err => {});
     }, null);
     return jre || process.env['JAVA_HOME'];
+}
+
+/**
+ * The java executable inside the given JRE folder
+ */
+function javaExecutable(jre) {
+    return path.join(jre, 'bin', process.platform == 'win32' ? 'java.exe' : 'java');
 }
 
 /**
